@@ -1,10 +1,10 @@
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, RwLock, Weak};
 
-use common::datatype::types::{EdgeId, VertexId};
-use common::datatype::value::PropertyValue;
 use crossbeam_skiplist::SkipSet;
 use dashmap::DashMap;
+use minigu_common::datatype::types::{EdgeId, VertexId};
+use minigu_common::datatype::value::PropertyValue;
 
 use super::transaction::{MemTransaction, MemTxnManager};
 use crate::error::{
@@ -721,8 +721,8 @@ fn check_write_conflict(commit_ts: Timestamp, txn: &MemTransaction) -> StorageRe
 
 #[cfg(test)]
 mod tests {
-    use common::datatype::types::LabelId;
-    use common::datatype::value::PropertyValue;
+    use minigu_common::datatype::types::LabelId;
+    use minigu_common::datatype::value::PropertyValue;
     use {Edge, Vertex};
 
     use super::*;

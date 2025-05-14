@@ -1,7 +1,7 @@
 use std::sync::Weak;
 
-use common::datatype::types::{EdgeId, LabelId, VertexId};
-use common::datatype::value::PropertyValue;
+use minigu_common::datatype::types::{EdgeId, LabelId, VertexId};
+use minigu_common::datatype::value::PropertyValue;
 
 use crate::model::edge::Edge;
 use crate::model::vertex::Vertex;
