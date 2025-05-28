@@ -1208,7 +1208,9 @@ name = "minigu-binder"
 version = "0.1.0"
 dependencies = [
  "gql-parser",
+ "minigu-catalog",
  "serde",
+ "smol_str",
  "thiserror",
 ]
 
