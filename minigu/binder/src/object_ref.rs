@@ -2,13 +2,14 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use minigu_catalog::provider::{
-    EdgeTypeProvider, GraphProvider, GraphTypeProvider, ProcedureProvider, SchemaProvider,
-    VertexTypeProvider,
+    DirectoryProvider, EdgeTypeProvider, GraphProvider, GraphTypeProvider, ProcedureProvider,
+    SchemaProvider, VertexTypeProvider,
 };
 use serde::Serialize;
 use smol_str::SmolStr;
 
 pub type SchemaRef = ObjectRef<dyn SchemaProvider>;
+pub type DirectoryRef = ObjectRef<dyn DirectoryProvider>;
 pub type GraphRef = ObjectRef<dyn GraphProvider>;
 pub type GraphTypeRef = ObjectRef<dyn GraphTypeProvider>;
 pub type VertexTypeRef = ObjectRef<dyn VertexTypeProvider>;

@@ -6,9 +6,13 @@ version = "0.1.0"
 [dependencies]
 gql-parser = { workspace = true }
 minigu-catalog = { workspace = true }
-serde = { workspace = true, features = ["std", "derive"], optional = true }
+minigu-common = { workspace = true }
+serde = { workspace = true, features = ["std", "derive"] }
 smol_str = { workspace = true, features = ["std"] }
 thiserror = { workspace = true, features = ["std"] }
+
+[dev-dependencies]
+insta = { workspace = true }
 
 [lints]
 workspace = true
