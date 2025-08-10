@@ -1,0 +1,16 @@
+[package]
+name = "minigu-python"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "minigu_python"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+minigu = { path = "../core" }
+minigu-storage = { path = "../storage" }
+minigu-common = { path = "../common" }
+minigu-context = { path = "../context" }
+serde_json = "1.0"
