@@ -1,16 +1,23 @@
 [package]
+edition.workspace = true
+license.workspace = true
 name = "minigu-python"
-version = "0.1.0"
-edition = "2021"
+repository.workspace = true
+version.workspace = true
 
 [lib]
 name = "minigu_python"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.21", features = ["extension-module"] }
-minigu = { path = "../core" }
-minigu-storage = { path = "../storage" }
-minigu-common = { path = "../common" }
-minigu-context = { path = "../context" }
-serde_json = "1.0"
+pyo3 = { workspace = true, features = ["extension-module"] }
+minigu = { workspace = true }
+minigu-common = { workspace = true }
+minigu-context = { workspace = true }
+minigu-catalog = { workspace = true }
+minigu-storage = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true
