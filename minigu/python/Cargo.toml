@@ -16,7 +16,7 @@ minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
 minigu-storage = { workspace = true }
-pyo3 = { workspace = true, features = ["extension-module"] }
+pyo3 = { workspace = true, features = ["extension-module", "abi3"] }
 serde_json = { workspace = true }
 
 [build-dependencies]
@@ -34,13 +34,3 @@ ignored = [
     "minigu-storage",
     "serde_json",
 ]
-
-# Configuration for PyO3 linking on macOS
-[target.'cfg(target_os = "macos")'.dependencies]
-pyo3 = { workspace = true, features = [
-    "extension-module",
-    "generate-import-lib",
-] }
-
-[target.'cfg(target_os = "macos")'.env]
-PYO3_NO_PYTHON = "1"
