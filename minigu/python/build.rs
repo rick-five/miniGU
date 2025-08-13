@@ -5,7 +5,7 @@ fn main() {
     pyo3_build_config::use_pyo3_cfgs();
     
     // Special handling for macOS
-    if env::var("TARGET").map_or(false, |target| target.contains("apple")) {
+    if env::var("TARGET").is_ok_and(|target| target.contains("apple")) {
         // Try to automatically find and link Python
         println!("cargo:rustc-link-lib=dylib=python3");
     }
