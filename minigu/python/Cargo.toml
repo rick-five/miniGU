@@ -33,4 +33,7 @@ ignored = [
 
 # Configuration for PyO3 linking on macOS
 [target.'cfg(target_os = "macos")'.dependencies]
-pyo3 = { workspace = true, features = ["extension-module", "generate-import-lib"] }
+pyo3 = { workspace = true, features = [
+    "extension-module",
+    "generate-import-lib",
+] }
