@@ -4,6 +4,7 @@ license.workspace = true
 name = "minigu-python"
 repository.workspace = true
 version.workspace = true
+build = "build.rs"
 
 [lib]
 crate-type = ["cdylib"]
@@ -18,6 +19,9 @@ minigu-storage = { workspace = true }
 pyo3 = { workspace = true, features = ["extension-module"] }
 serde_json = { workspace = true }
 
+[build-dependencies]
+pyo3-build-config = { workspace = true }
+
 [lints]
 workspace = true
 
@@ -30,10 +34,3 @@ ignored = [
     "minigu-storage",
     "serde_json",
 ]
-
-# Configuration for PyO3 linking on macOS
-[target.'cfg(target_os = "macos")'.dependencies]
-pyo3 = { workspace = true, features = [
-    "extension-module",
-    "generate-import-lib",
-] }
