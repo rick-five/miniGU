@@ -17,7 +17,7 @@ impl PyMiniGu {
     /// Create a new miniGU session
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGU { is_open: true })
+        Ok(PyMiniGu { is_open: true })
     }
 
     /// Execute a GQL query
@@ -29,17 +29,17 @@ impl PyMiniGu {
         }
 
         // Create a Python object to represent the result
-        let result_dict = PyDict::new_bound(py);
+        let result_dict = PyDict::new(py);
 
         // Add empty schema
         result_dict.set_item("schema", py.None())?;
 
         // Add empty data
-        let py_data = PyList::empty_bound(py);
+        let py_data = PyList::empty(py);
         result_dict.set_item("data", py_data)?;
 
         // Add metrics
-        let py_metrics = PyDict::new_bound(py);
+        let py_metrics = PyDict::new(py);
         py_metrics.set_item("parsing_time_ms", 0)?;
         py_metrics.set_item("planning_time_ms", 0)?;
         py_metrics.set_item("execution_time_ms", 0)?;
