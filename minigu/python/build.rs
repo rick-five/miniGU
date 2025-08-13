@@ -9,9 +9,4 @@ fn main() {
         // Try to automatically find and link Python
         println!("cargo:rustc-link-lib=dylib=python3");
     }
-    
-    // Print PyO3 configuration for debugging
-    if env::var("PYO3_PRINT_CONFIG").is_ok() {
-        pyo3_build_config::print_cfgs();
-    }
 }
