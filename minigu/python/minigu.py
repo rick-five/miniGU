@@ -24,13 +24,13 @@ except (ImportError, ModuleNotFoundError):
 
 
 class MiniGUError(Exception):
-    """miniGU数据库异常类"""
+    """miniGU database exception class"""
     pass
 
 
 class QueryResult:
     """
-    查询结果类
+    Query result class
     """
     
     def __init__(self, schema: Optional[List[Dict[str, Any]]] = None, 
@@ -43,10 +43,10 @@ class QueryResult:
     
     def to_dict(self) -> Dict[str, Any]:
         """
-        将结果转换为字典格式
+        Convert the result to dictionary format
         
         Returns:
-            包含schema、data和metrics的字典
+            Dictionary containing schema, data, and metrics
         """
         return {
             "schema": self.schema,
@@ -57,10 +57,10 @@ class QueryResult:
     
     def to_list(self) -> List[Dict[str, Any]]:
         """
-        将结果转换为字典列表格式
+        Convert the result to a list of dictionaries format
         
         Returns:
-            每行数据作为一个字典的列表
+            List of dictionaries, with each row as a dictionary
         """
         if not self.schema or not self.data:
             return []
@@ -74,15 +74,15 @@ class QueryResult:
 
 class MiniGU:
     """
-    miniGU数据库连接类
+    miniGU database connection class
     """
     
     def __init__(self, db_path: Optional[str] = None):
         """
-        初始化miniGU数据库连接
+        Initialize miniGU database connection
         
         Args:
-            db_path: 数据库文件路径，如果为None则创建内存数据库
+            db_path: Database file path, if None creates an in-memory database
         """
         self.db_path = db_path
         self._rust_instance = None
@@ -92,7 +92,7 @@ class MiniGU:
     
     def _connect(self) -> None:
         """
-        建立数据库连接
+        Establish database connection
         """
         try:
             if HAS_RUST_BINDINGS:
@@ -104,16 +104,16 @@ class MiniGU:
     
     def execute(self, query: str) -> QueryResult:
         """
-        执行GQL查询
+        Execute GQL query
         
         Args:
-            query: GQL查询语句
+            query: GQL query statement
             
         Returns:
-            查询结果
+            Query result
             
         Raises:
-            MiniGUError: 查询执行失败时抛出
+            MiniGUError: Raised when query execution fails
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -194,13 +194,13 @@ class MiniGU:
     
     def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
-        加载数据到数据库
+        Load data into the database
         
         Args:
-            data: 要加载的数据，可以是字典列表或文件路径
+            data: Data to load, can be a list of dictionaries or file path
             
         Raises:
-            MiniGUError: 数据加载失败时抛出
+            MiniGUError: Raised when data loading fails
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -242,13 +242,13 @@ class MiniGU:
     
     def save(self, path: str) -> None:
         """
-        保存数据库到指定路径
+        Save the database to the specified path
         
         Args:
-            path: 保存路径
+            path: Save path
             
         Raises:
-            MiniGUError: 保存失败时抛出
+            MiniGUError: Raised when save fails
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -278,11 +278,11 @@ class MiniGU:
     
     def create_graph(self, graph_name: str, schema: Optional[Dict] = None) -> None:
         """
-        创建图数据库
+        Create a graph database
         
         Args:
-            graph_name: 图名称
-            schema: 图模式定义（可选）
+            graph_name: Graph name
+            schema: Graph schema definition (optional)
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -311,13 +311,13 @@ class MiniGU:
     
     def _format_schema(self, schema: Dict) -> str:
         """
-        格式化图模式定义
+        Format graph schema definition
         
         Args:
-            schema: 图模式定义
+            schema: Graph schema definition
             
         Returns:
-            格式化后的模式字符串
+            Formatted schema string
         """
         # 简单实现，实际应该更复杂
         elements = []
@@ -328,10 +328,10 @@ class MiniGU:
     
     def insert(self, data: Union[List[Dict], str]) -> None:
         """
-        插入数据到当前图
+        Insert data into the current graph
         
         Args:
-            data: 要插入的数据列表或GQL INSERT语句
+            data: List of data to insert or GQL INSERT statement
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -362,13 +362,13 @@ class MiniGU:
     
     def _format_insert_data(self, data: List[Dict]) -> str:
         """
-        将数据格式化为GQL INSERT语句
+        Format data as GQL INSERT statement
         
         Args:
-            data: 要插入的数据列表
+            data: List of data to insert
             
         Returns:
-            GQL INSERT语句片段
+            GQL INSERT statement fragment
         """
         # 简单实现，实际应该更复杂
         records = []
@@ -380,7 +380,7 @@ class MiniGU:
     
     def close(self) -> None:
         """
-        关闭数据库连接
+        Close database connection
         """
         if self.is_connected:
             if HAS_RUST_BINDINGS and self._rust_instance:
@@ -397,13 +397,13 @@ class MiniGU:
 
 def connect(db_path: Optional[str] = None) -> MiniGU:
     """
-    创建到miniGU数据库的连接
+    Create a connection to the miniGU database
     
     Args:
-        db_path: 数据库文件路径，如果为None则创建内存数据库
+        db_path: Database file path, if None creates an in-memory database
         
     Returns:
-        MiniGU数据库连接对象
+        MiniGU database connection object
     """
     if HAS_RUST_BINDINGS:
         # 使用真实的Rust绑定

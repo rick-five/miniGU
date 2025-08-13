@@ -6,18 +6,18 @@ repository.workspace = true
 version.workspace = true
 
 [lib]
-name = "minigu_python"
 crate-type = ["cdylib"]
+name = "minigu_python"
 
 [dependencies]
-pyo3 = { workspace = true, features = ["extension-module"] }
 minigu = { workspace = true }
+minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
-minigu-catalog = { workspace = true }
 minigu-storage = { workspace = true }
-tokio = { workspace = true }
+pyo3 = { version = "0.24.1", features = ["extension-module"] }
 serde_json = { workspace = true }
+tokio = { workspace = true }
 
 [lints]
 workspace = true
