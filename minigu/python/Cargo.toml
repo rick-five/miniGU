@@ -10,16 +10,23 @@ crate-type = ["cdylib"]
 name = "minigu_python"
 
 [dependencies]
-pyo3 = { version = "0.24.1", features = ["extension-module"] }
 minigu = { workspace = true }
+minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
-minigu-catalog = { workspace = true }
 minigu-storage = { workspace = true }
+pyo3 = { version = "0.24.1", features = ["extension-module"] }
 serde_json = { workspace = true }
 
 [lints]
 workspace = true
 
 [package.metadata.cargo-machete]
-ignored = ["minigu", "minigu-common", "minigu-context", "minigu-catalog", "minigu-storage", "serde_json"]
+ignored = [
+    "minigu",
+    "minigu-common",
+    "minigu-context",
+    "minigu-catalog",
+    "minigu-storage",
+    "serde_json",
+]
