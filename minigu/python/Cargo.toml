@@ -1,5 +1,4 @@
 [package]
-build = "build.rs"
 edition.workspace = true
 license.workspace = true
 name = "minigu-python"
@@ -16,11 +15,7 @@ minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
 minigu-storage = { workspace = true }
-pyo3 = { workspace = true, features = ["extension-module", "abi3"] }
 serde_json = { workspace = true }
-
-[build-dependencies]
-pyo3-build-config = { workspace = true }
 
 [lints]
 workspace = true
