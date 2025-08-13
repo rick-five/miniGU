@@ -12,6 +12,6 @@ fn main() {
     
     // Print PyO3 configuration for debugging
     if env::var("PYO3_PRINT_CONFIG").is_ok() {
-        pyo3_build_config::print_config();
+        pyo3_build_config::print_cfgs();
     }
 }
