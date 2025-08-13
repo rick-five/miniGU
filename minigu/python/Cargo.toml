@@ -30,3 +30,7 @@ ignored = [
     "minigu-storage",
     "serde_json",
 ]
+
+# Configuration for PyO3 on macOS
+[target.'cfg(target_os = "macos")'.dependencies]
+pyo3 = { version = "0.24.1", features = ["extension-module", "abi3-py37"] }
