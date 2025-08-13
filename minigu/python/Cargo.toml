@@ -1,10 +1,10 @@
 [package]
+build = "build.rs"
 edition.workspace = true
 license.workspace = true
 name = "minigu-python"
 repository.workspace = true
 version.workspace = true
-build = "build.rs"
 
 [lib]
 crate-type = ["cdylib"]
