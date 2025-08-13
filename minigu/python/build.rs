@@ -14,11 +14,11 @@ fn main() {
         {
             if lib_dir.status.success() {
                 let output = String::from_utf8_lossy(&lib_dir.stdout);
-                for arg in output.trim().split_whitespace() {
-                    if arg.starts_with("-L") {
-                        println!("cargo:rustc-link-search=native={}", &arg[2..]);
-                    } else if arg.starts_with("-l") {
-                        println!("cargo:rustc-link-lib={}", &arg[2..]);
+                for arg in output.split_whitespace() {
+                    if let Some(lib_path) = arg.strip_prefix("-L") {
+                        println!("cargo:rustc-link-search=native={}", lib_path);
+                    } else if let Some(lib_name) = arg.strip_prefix("-l") {
+                        println!("cargo:rustc-link-lib={}", lib_name);
                     }
                 }
             }
