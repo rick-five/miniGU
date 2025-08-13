@@ -87,11 +87,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - name: Install Python (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install python
-        echo "PYO3_PYTHON=$(which python3)" >> $GITHUB_ENV
     - uses: Swatinem/rust-cache@v2
     - run: cargo build --features ${{ env.DEFAULT_FEATURES }}
 
@@ -118,11 +113,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - name: Install Python (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install python
-        echo "PYO3_PYTHON=$(which python3)" >> $GITHUB_ENV
     - uses: taiki-e/install-action@v2
       with:
         tool: cargo-nextest@0.9.88
