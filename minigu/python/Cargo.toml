@@ -20,3 +20,6 @@ serde_json = { workspace = true }
 
 [lints]
 workspace = true
+
+[package.metadata.cargo-machete]
+ignored = ["minigu", "minigu-common", "minigu-context", "minigu-catalog", "minigu-storage", "serde_json"]
