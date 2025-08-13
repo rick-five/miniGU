@@ -101,7 +101,6 @@ temp-dir = "0.1.16"
 temp-file = "0.1.9"
 tempfile = "3.20.0"
 thiserror = { version = "2.0.12", default-features = false }
-tokio = { version = "1.0", features = ["rt", "rt-multi-thread", "macros"] }
 uuid = "1.17.0"
 walkdir = "2.5.0"
 
