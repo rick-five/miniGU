@@ -1502,7 +1502,13 @@ dependencies = [
 name = "minigu-python"
 version = "0.1.0"
 dependencies = [
+ "minigu",
+ "minigu-catalog",
+ "minigu-common",
+ "minigu-context",
+ "minigu-storage",
  "pyo3",
+ "serde_json",
 ]
 
 [[package]]
