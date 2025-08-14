@@ -21,6 +21,25 @@ cargo run -- shell    # start in debug mode
 cargo run -r -- shell # start in release mode
 ```
 
+## 构建说明
+
+### Windows
+在 Windows 上构建项目应该可以直接工作。
+
+### macOS
+在 macOS 上构建 Python 绑定时，可能需要确保正确安装了 Python 开发环境：
+```bash
+brew install python3
+```
+
+如果遇到链接错误，可以尝试设置环境变量：
+```bash
+export PYO3_PYTHON=python3
+```
+
+### Linux
+在 Linux 上构建项目应该可以直接工作，但确保安装了必要的开发工具。
+
 ## 系统架构
 
 TBA
