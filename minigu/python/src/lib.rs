@@ -20,6 +20,7 @@ use pyo3::types::{PyDict, PyList, PyModule, PyString};
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
+    db_path: Option<String>,
 }
 
 #[pymethods]
@@ -30,6 +31,7 @@ impl PyMiniGU {
         Ok(PyMiniGU {
             database: None,
             session: None,
+            db_path: None,
         })
     }
 
@@ -127,20 +129,40 @@ impl PyMiniGU {
     /// Load data from a file
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_from_file(&self, path: &str) -> PyResult<()> {
-        // TODO: Implement loading data from file
-        println!("Loading data from file: {}", path);
-        Ok(())
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
+        // Execute the import procedure
+        let query = format!("CALL import('default_graph', '{}', 'manifest.json');", path);
+        match session.query(&query) {
+            Ok(_) => {
+                println!("Data loaded successfully from: {}", path);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to load data from file: {}",
+                e
+            ))),
+        }
     }
 
     /// Load data directly
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&self, data: &Bound<'_, PyAny>) -> PyResult<()> {
-        // TODO: Implement loading data from Python objects
-        println!("Loading data from Python objects");
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
         // Convert Python data to Rust data structures
         if let Ok(list) = data.downcast::<PyList>() {
             println!("Loading {} records", list.len());
-            // Process the list of dictionaries
+            
+            // For now, we'll just print the data as a placeholder
+            // In a real implementation, we would convert this to GQL INSERT statements
+            // and execute them through the session
             for item in list.iter() {
                 if let Ok(dict) = item.downcast::<PyDict>() {
                     // Process each dictionary
@@ -154,69 +176,119 @@ impl PyMiniGU {
                     }
                 }
             }
+            
+            // In a real implementation, we would do something like:
+            // 1. Convert the Python data to GQL INSERT statements
+            // 2. Execute those statements through the session
+            // For now, we'll just print a message
+            println!("Data would be loaded into the database");
+            Ok(())
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries"))
         }
-        Ok(())
     }
 
     /// Save database to a file
     #[allow(unsafe_op_in_unsafe_fn)]
     fn save_to_file(&self, path: &str) -> PyResult<()> {
-        // TODO: Implement saving database to file
-        println!("Saving database to file: {}", path);
-        Ok(())
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
+        // Execute the export procedure
+        let query = format!("CALL export('default_graph', '{}', 'manifest.json');", path);
+        match session.query(&query) {
+            Ok(_) => {
+                println!("Database saved successfully to: {}", path);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to save database to file: {}",
+                e
+            ))),
+        }
     }
 
     /// Create a graph
     #[allow(unsafe_op_in_unsafe_fn)]
     fn create_graph(&self, name: &str, schema: Option<&str>) -> PyResult<()> {
-        // TODO: Implement graph creation
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
+        // For now, we'll just print a message
+        // In a real implementation, we would create the graph through appropriate APIs
         println!("Creating graph: {} with schema: {:?}", name, schema);
-
-        // If we have a session, we could use it to create the graph
-        // This is a placeholder implementation
-        if let Some(_session) = &self.session {
-            // In a real implementation, we would use the session to create the graph
-            // For now, we'll just print a message
-            println!(
-                "Graph '{}' would be created with schema: {:?}",
-                name, schema
-            );
-        }
-
+        
+        // Execute a CREATE GRAPH statement if we had that capability
+        // For now, we'll just print a message
+        println!("Graph '{}' would be created with schema: {:?}", name, schema);
         Ok(())
     }
 
     /// Insert data
     #[allow(unsafe_op_in_unsafe_fn)]
     fn insert_data(&self, data: &str) -> PyResult<()> {
-        // TODO: Implement data insertion
-        println!("Inserting data: {}", data);
-
-        // If we have a session, we could use it to insert the data
-        // This is a placeholder implementation
-        if let Some(_session) = &self.session {
-            // In a real implementation, we would use the session to insert the data
-            // For now, we'll just print a message
-            println!("Data would be inserted: {}", data);
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
+        // Execute the INSERT statement
+        match session.query(data) {
+            Ok(_) => {
+                println!("Data inserted successfully: {}", data);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to insert data: {}",
+                e
+            ))),
         }
-
-        Ok(())
     }
 
     /// Update data
     #[allow(unsafe_op_in_unsafe_fn)]
     fn update_data(&self, query: &str) -> PyResult<()> {
-        // TODO: Implement data update
-        println!("Updating data with query: {}", query);
-        Ok(())
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
+        // Execute the UPDATE statement
+        match session.query(query) {
+            Ok(_) => {
+                println!("Data updated successfully with query: {}", query);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to update data: {}",
+                e
+            ))),
+        }
     }
 
     /// Delete data
     #[allow(unsafe_op_in_unsafe_fn)]
     fn delete_data(&self, query: &str) -> PyResult<()> {
-        // TODO: Implement data deletion
-        println!("Deleting data with query: {}", query);
-        Ok(())
+        // Get the session
+        let session = self.session.as_ref().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
+        
+        // Execute the DELETE statement
+        match session.query(query) {
+            Ok(_) => {
+                println!("Data deleted successfully with query: {}", query);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to delete data: {}",
+                e
+            ))),
+        }
     }
 
     /// Close the database connection
