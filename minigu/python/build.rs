@@ -2,7 +2,7 @@ use std::env;
 
 fn main() {
     // Special handling for macOS
-    if env::var("CARGO_CFG_TARGET_OS").map_or(false, |os| os == "macos") {
+    if env::var("CARGO_CFG_TARGET_OS").is_ok_and(|os| os == "macos") {
         // Try to find Python framework
         if env::var("PYO3_PYTHON").is_ok() {
             println!("cargo:rustc-link-lib=framework=Python");
