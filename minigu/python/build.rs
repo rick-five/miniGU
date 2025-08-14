@@ -2,6 +2,7 @@ use std::env;
 
 fn main() {
     // Use PyO3's helper function to set the correct linker arguments for extension modules
+    #[cfg(target_os = "macos")]
     pyo3_build_config::add_extension_module_link_args();
 
     // Special handling for macOS
