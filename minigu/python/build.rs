@@ -5,7 +5,7 @@ fn main() {
     if env::var("CARGO_CFG_TARGET_OS").is_ok_and(|os| os == "macos") {
         // Check if we're cross-compiling to macOS ARM64
         let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-        let is_cross_compiling = target_arch == "aarch64";
+        let is_cross_compiling = target_arch == "aarch64" && cfg!(not(target_arch = "aarch64"));
         
         // Try to find Python framework
         if let Ok(python_lib) = env::var("PYTHON_LIB") {
@@ -29,6 +29,12 @@ fn main() {
             // This is a simplified approach - in practice, you'd need to specify
             // the correct paths to the macOS SDK and Python libraries
             println!("cargo:warning=Cross-compiling to macOS ARM64 may require additional configuration");
+            println!("cargo:rustc-link-lib=framework=Python");
+        } else {
+            // Native build on macOS (Intel or Apple Silicon)
+            println!("cargo:rustc-link-lib=framework=Python");
+            println!("cargo:rustc-link-search=framework=/opt/homebrew/Frameworks");
+            println!("cargo:rustc-link-search=framework=/usr/local/Frameworks");
         }
     }
 
