@@ -65,10 +65,27 @@ cargo build --target aarch64-unknown-linux-gnu
 ```
 
 对于 macOS ARM64（本地构建）：
+确保在 macOS ARM64 设备上进行构建（如 Apple Silicon Mac）：
+
+1. 安装必要的开发工具：
 ```bash
-rustup target add aarch64-apple-darwin
-cargo build --target aarch64-apple-darwin
+# 安装 Homebrew（如果尚未安装）
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 安装 Python 开发环境
+brew install python3
 ```
+
+2. 构建命令：
+```bash
+# 添加目标平台支持
+rustup target add aarch64-apple-darwin
+
+# 构建项目
+cargo build --target aarch64-apple-darwin --features std,serde,miette
+```
+
+注意：由于需要特定的 macOS SDK 和工具链，从其他平台（如 Windows 或 Linux）进行 macOS 交叉编译可能需要额外的配置和工具。
 
 对于 Windows ARM64，需要安装 Visual Studio 或 Build Tools 并确保包含 C++ 工具。
 
