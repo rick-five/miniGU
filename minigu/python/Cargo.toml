@@ -10,14 +10,14 @@ crate-type = ["cdylib"]
 name = "minigu_python"
 
 [dependencies]
+arrow = { workspace = true }
 minigu = { workspace = true }
 minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
 minigu-storage = { workspace = true }
-serde_json = { workspace = true }
 pyo3 = { version = "0.20", features = ["extension-module", "abi3-py37"] }
-arrow = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true
