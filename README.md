@@ -21,74 +21,6 @@ cargo run -- shell    # start in debug mode
 cargo run -r -- shell # start in release mode
 ```
 
-## 构建说明
-
-### Windows
-在 Windows 上构建项目应该可以直接工作。
-
-### macOS
-在 macOS 上构建 Python 绑定时，可能需要确保正确安装了 Python 开发环境：
-```bash
-brew install python3
-```
-
-如果遇到链接错误，可以尝试设置环境变量：
-```bash
-export PYO3_PYTHON=python3
-```
-
-### Linux
-在 Linux 上构建项目应该可以直接工作，但确保安装了必要的开发工具。
-
-### ARM64 支持
-项目支持在 ARM64 架构上构建和运行。要进行交叉编译，请确保安装了相应的工具链：
-
-对于 Linux ARM64：
-```bash
-# Ubuntu/Debian
-sudo apt-get install gcc-aarch64-linux-gnu
-
-# CentOS/RHEL
-sudo yum install gcc-aarch64-linux-gnu
-```
-
-然后配置 Cargo 使用正确的链接器，在项目根目录创建 `.cargo/config.toml` 文件：
-```toml
-[target.aarch64-unknown-linux-gnu]
-linker = "aarch64-linux-gnu-gcc"
-```
-
-构建命令：
-```bash
-rustup target add aarch64-unknown-linux-gnu
-cargo build --target aarch64-unknown-linux-gnu
-```
-
-对于 macOS ARM64（本地构建）：
-确保在 macOS ARM64 设备上进行构建（如 Apple Silicon Mac）：
-
-1. 安装必要的开发工具：
-```bash
-# 安装 Homebrew（如果尚未安装）
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# 安装 Python 开发环境
-brew install python3
-```
-
-2. 构建命令：
-```bash
-# 添加目标平台支持
-rustup target add aarch64-apple-darwin
-
-# 构建项目
-cargo build --target aarch64-apple-darwin --features std,serde,miette
-```
-
-注意：由于需要特定的 macOS SDK 和工具链，从其他平台（如 Windows 或 Linux）进行 macOS 交叉编译可能需要额外的配置和工具。
-
-对于 Windows ARM64，需要安装 Visual Studio 或 Build Tools 并确保包含 C++ 工具。
-
 ## 系统架构
 
 TBA
@@ -115,6 +47,5 @@ MiniGU 开放了一些[新功能的开发](https://github.com/tugraph-family/min
 
 通过钉钉群、微信群、微信公众号、邮箱和电话联系我们:
 ![contacts](./docs/images/contact.jpeg)
-
 
 
