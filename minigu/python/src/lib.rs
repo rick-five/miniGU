@@ -248,6 +248,7 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 }
 
 /// Extract a value from an Arrow array at a specific index
+#[allow(deprecated)]
 fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
     Python::with_gil(|py| {
         match array.data_type() {
@@ -256,7 +257,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_py(py))
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             DataType::Utf8 => {
@@ -264,7 +265,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_py(py))
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             DataType::Boolean => {
@@ -280,12 +281,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_py(py))
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             _ => {
                 // For unsupported types, convert to string representation
-                Ok(format!("Unsupported type: {:?}", array.data_type()).into_py(py))
+                Ok(format!("Unsupported type: {:?}", array.data_type())
+                    .into_pyobject(py)?
+                    .into_any()
+                    .unbind())
             }
         }
     })
