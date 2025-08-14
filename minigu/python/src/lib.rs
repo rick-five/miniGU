@@ -128,9 +128,9 @@ impl PyMiniGU {
 
     /// Load data from a file
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn load_from_file(&self, path: &str) -> PyResult<()> {
+    fn load_from_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
@@ -150,9 +150,9 @@ impl PyMiniGU {
 
     /// Load data directly
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn load_data(&self, data: &Bound<'_, PyAny>) -> PyResult<()> {
+    fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
@@ -190,9 +190,9 @@ impl PyMiniGU {
 
     /// Save database to a file
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn save_to_file(&self, path: &str) -> PyResult<()> {
+    fn save_to_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
@@ -212,9 +212,9 @@ impl PyMiniGU {
 
     /// Create a graph
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn create_graph(&self, name: &str, schema: Option<&str>) -> PyResult<()> {
+    fn create_graph(&mut self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let _session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
@@ -230,9 +230,9 @@ impl PyMiniGU {
 
     /// Insert data
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn insert_data(&self, data: &str) -> PyResult<()> {
+    fn insert_data(&mut self, data: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
@@ -251,9 +251,9 @@ impl PyMiniGU {
 
     /// Update data
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn update_data(&self, query: &str) -> PyResult<()> {
+    fn update_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
@@ -272,9 +272,9 @@ impl PyMiniGU {
 
     /// Delete data
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn delete_data(&self, query: &str) -> PyResult<()> {
+    fn delete_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_ref().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
         
