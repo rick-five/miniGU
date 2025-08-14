@@ -20,6 +20,7 @@ use pyo3::types::{PyDict, PyList, PyModule, PyString};
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
+    #[allow(dead_code)]
     db_path: Option<String>,
 }
 
@@ -152,7 +153,7 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
+        let _session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
