@@ -163,13 +163,13 @@ impl PyMiniGU {
 
             // Build GQL INSERT statements from the Python data
             let mut insert_statements = Vec::new();
-            
+
             for item in list.iter() {
                 if let Ok(dict) = item.downcast::<PyDict>() {
                     // Extract label and properties
                     let mut label = "Node".to_string();
                     let mut properties = Vec::new();
-                    
+
                     for (key, value) in dict.iter() {
                         if let (Ok(key_str), Ok(value_str)) = (
                             key.downcast::<PyString>().map(|s| s.to_string()),
@@ -184,7 +184,7 @@ impl PyMiniGU {
                             }
                         }
                     }
-                    
+
                     // Create INSERT statement
                     if !properties.is_empty() {
                         let props_str = properties.join(", ");
@@ -193,7 +193,7 @@ impl PyMiniGU {
                     }
                 }
             }
-            
+
             // Execute all INSERT statements
             for statement in insert_statements {
                 match session.query(&statement) {
@@ -208,7 +208,7 @@ impl PyMiniGU {
                     }
                 }
             }
-            
+
             println!("All data loaded successfully");
             Ok(())
         } else {
@@ -247,19 +247,19 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}');", name);
         match session.query(&query) {
             Ok(_) => {
                 println!("Graph '{}' created successfully", name);
-                
+
                 // If schema is provided, we could process it here
                 if let Some(schema_str) = schema {
                     println!("Schema provided but not yet implemented: {}", schema_str);
                     // In a full implementation, we would parse the schema and add vertex/edge types
                 }
-                
+
                 Ok(())
             }
             Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
