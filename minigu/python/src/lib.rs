@@ -10,11 +10,6 @@ use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyModule, PyString};
 
-// Special handling for macOS to avoid linking issues
-#[cfg(target_os = "macos")]
-#[allow(unused_imports)]
-use std::ffi::c_void;
-
 /// PyMiniGu class that wraps the Rust Database
 #[allow(non_local_definitions)]
 #[pyclass]
