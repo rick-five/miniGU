@@ -38,7 +38,10 @@ ignored = [
 
 # Platform-specific features for pyo3
 [target.'cfg(target_os = "macos")'.dependencies]
-pyo3 = { workspace = true, features = ["auto-initialize", "generate-import-lib"] }
+pyo3 = { workspace = true, features = [
+    "auto-initialize",
+    "generate-import-lib",
+] }
 
 # Link Python framework on macOS
 [target.'cfg(target_os = "macos")'.build-dependencies]
