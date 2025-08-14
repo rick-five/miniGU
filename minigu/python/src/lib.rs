@@ -133,7 +133,7 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Execute the import procedure
         let query = format!("CALL import('default_graph', '{}', 'manifest.json');", path);
         match session.query(&query) {
@@ -155,11 +155,11 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Convert Python data to Rust data structures
         if let Ok(list) = data.downcast::<PyList>() {
             println!("Loading {} records", list.len());
-            
+
             // For now, we'll just print the data as a placeholder
             // In a real implementation, we would convert this to GQL INSERT statements
             // and execute them through the session
@@ -176,7 +176,7 @@ impl PyMiniGU {
                     }
                 }
             }
-            
+
             // In a real implementation, we would do something like:
             // 1. Convert the Python data to GQL INSERT statements
             // 2. Execute those statements through the session
@@ -184,7 +184,9 @@ impl PyMiniGU {
             println!("Data would be loaded into the database");
             Ok(())
         } else {
-            Err(PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries"))
+            Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Expected a list of dictionaries",
+            ))
         }
     }
 
@@ -195,7 +197,7 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Execute the export procedure
         let query = format!("CALL export('default_graph', '{}', 'manifest.json');", path);
         match session.query(&query) {
@@ -217,14 +219,17 @@ impl PyMiniGU {
         let _session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // For now, we'll just print a message
         // In a real implementation, we would create the graph through appropriate APIs
         println!("Creating graph: {} with schema: {:?}", name, schema);
-        
+
         // Execute a CREATE GRAPH statement if we had that capability
         // For now, we'll just print a message
-        println!("Graph '{}' would be created with schema: {:?}", name, schema);
+        println!(
+            "Graph '{}' would be created with schema: {:?}",
+            name, schema
+        );
         Ok(())
     }
 
@@ -235,7 +240,7 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Execute the INSERT statement
         match session.query(data) {
             Ok(_) => {
@@ -256,7 +261,7 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Execute the UPDATE statement
         match session.query(query) {
             Ok(_) => {
@@ -277,7 +282,7 @@ impl PyMiniGU {
         let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-        
+
         // Execute the DELETE statement
         match session.query(query) {
             Ok(_) => {
