@@ -5,4 +5,5 @@ linker = "aarch64-linux-gnu-gcc"
 linker = "link.exe"
 
 [target.aarch64-apple-darwin]
-# linker configuration for macOS ARM64 would go here if needed
+# For macOS ARM64, specify the linker explicitly
+linker = "cc"
