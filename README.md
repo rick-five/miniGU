@@ -64,6 +64,12 @@ rustup target add aarch64-unknown-linux-gnu
 cargo build --target aarch64-unknown-linux-gnu
 ```
 
+对于 macOS ARM64（本地构建）：
+```bash
+rustup target add aarch64-apple-darwin
+cargo build --target aarch64-apple-darwin
+```
+
 对于 Windows ARM64，需要安装 Visual Studio 或 Build Tools 并确保包含 C++ 工具。
 
 ## 系统架构

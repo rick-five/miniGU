@@ -3,3 +3,6 @@ linker = "aarch64-linux-gnu-gcc"
 
 [target.aarch64-pc-windows-msvc]
 linker = "link.exe"
+
+[target.aarch64-apple-darwin]
+# linker configuration for macOS ARM64 would go here if needed
