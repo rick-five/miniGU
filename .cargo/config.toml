@@ -8,3 +8,21 @@ linker = "link.exe"
 # For macOS ARM64, we rely on the system linker
 # When cross-compiling, you may need to specify the path to the macOS SDK
 # and Python libraries for the target platform
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
+
+[build]
+# For macOS system Python linking issues
+# rustflags = [
+#   "-C", "link-args=-Wl,-rpath,/Library/Developer/CommandLineTools/Library/Frameworks",
+# ]
