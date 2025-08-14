@@ -2,10 +2,10 @@
 //!
 //! This module provides Python bindings for the miniGU graph database using PyO3.
 
-use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
 use arrow::array::*;
 use arrow::datatypes::DataType;
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList, PyString};
 
 use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
@@ -36,17 +36,21 @@ impl PyMiniGU {
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
         match Database::open_in_memory(&config) {
-            Ok(db) => {
-                match db.session() {
-                    Ok(session) => {
-                        self.database = Some(db);
-                        self.session = Some(session);
-                        Ok(())
-                    }
-                    Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to create session: {}", e))),
+            Ok(db) => match db.session() {
+                Ok(session) => {
+                    self.database = Some(db);
+                    self.session = Some(session);
+                    Ok(())
                 }
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to initialize database: {}", e))),
+                Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                ))),
+            },
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to initialize database: {}",
+                e
+            ))),
         }
     }
 
@@ -63,7 +67,7 @@ impl PyMiniGU {
             Ok(query_result) => {
                 // Convert QueryResult to Python dict
                 let dict = PyDict::new(py);
-                
+
                 // Convert schema
                 let schema_list = PyList::empty(py);
                 if let Some(schema_ref) = query_result.schema() {
@@ -74,9 +78,9 @@ impl PyMiniGU {
                         schema_list.append(field_dict)?;
                     }
                 }
-                
+
                 dict.set_item("schema", schema_list)?;
-                
+
                 // Convert data
                 let data_list = PyList::empty(py);
                 for chunk in query_result.iter() {
@@ -90,21 +94,31 @@ impl PyMiniGU {
                         data_list.append(row_list)?;
                     }
                 }
-                
+
                 dict.set_item("data", data_list)?;
-                
+
                 // Convert metrics
                 let metrics = query_result.metrics();
                 let metrics_dict = PyDict::new(py);
-                metrics_dict.set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
-                metrics_dict.set_item("planning_time_ms", metrics.planning_time().as_millis() as f64)?;
-                metrics_dict.set_item("execution_time_ms", metrics.execution_time().as_millis() as f64)?;
-                
+                metrics_dict
+                    .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
+                metrics_dict.set_item(
+                    "planning_time_ms",
+                    metrics.planning_time().as_millis() as f64,
+                )?;
+                metrics_dict.set_item(
+                    "execution_time_ms",
+                    metrics.execution_time().as_millis() as f64,
+                )?;
+
                 dict.set_item("metrics", metrics_dict)?;
-                
+
                 Ok(dict.into())
             }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!("Query execution failed: {}", e))),
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Query execution failed: {}",
+                e
+            ))),
         }
     }
 
@@ -129,7 +143,10 @@ impl PyMiniGU {
                 if let Ok(dict) = item.downcast::<PyDict>() {
                     // Process each dictionary
                     for (key, value) in dict.iter() {
-                        if let (Ok(key_str), Ok(value_str)) = (key.downcast::<PyString>().map(|s| s.to_string()), value.str().map(|s| s.to_string())) {
+                        if let (Ok(key_str), Ok(value_str)) = (
+                            key.downcast::<PyString>().map(|s| s.to_string()),
+                            value.str().map(|s| s.to_string()),
+                        ) {
                             println!("  {}: {}", key_str, value_str);
                         }
                     }
@@ -152,15 +169,18 @@ impl PyMiniGU {
     fn create_graph(&self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // TODO: Implement graph creation
         println!("Creating graph: {} with schema: {:?}", name, schema);
-        
+
         // If we have a session, we could use it to create the graph
         // This is a placeholder implementation
         if let Some(_session) = &self.session {
             // In a real implementation, we would use the session to create the graph
             // For now, we'll just print a message
-            println!("Graph '{}' would be created with schema: {:?}", name, schema);
+            println!(
+                "Graph '{}' would be created with schema: {:?}",
+                name, schema
+            );
         }
-        
+
         Ok(())
     }
 
@@ -169,7 +189,7 @@ impl PyMiniGU {
     fn insert_data(&self, data: &str) -> PyResult<()> {
         // TODO: Implement data insertion
         println!("Inserting data: {}", data);
-        
+
         // If we have a session, we could use it to insert the data
         // This is a placeholder implementation
         if let Some(_session) = &self.session {
@@ -177,7 +197,7 @@ impl PyMiniGU {
             // For now, we'll just print a message
             println!("Data would be inserted: {}", data);
         }
-        
+
         Ok(())
     }
 
@@ -208,23 +228,23 @@ impl PyMiniGU {
 /// Convert a DataChunk to a Python list of lists
 fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
     let mut result = Vec::new();
-    
+
     // Get the number of rows
     let num_rows = chunk.len();
-    
+
     // For each row, create a list of values
     for row_idx in 0..num_rows {
         let mut row_vec = Vec::new();
-        
+
         // For each column, get the value at this row
         for col in chunk.columns() {
             let value = extract_value_from_array(col, row_idx)?;
             row_vec.push(value);
         }
-        
+
         result.push(row_vec);
     }
-    
+
     Ok(result)
 }
 
@@ -239,7 +259,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 } else {
                     Ok(arr.value(index).into_py(py))
                 }
-            },
+            }
             DataType::Utf8 => {
                 let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
                 if arr.is_null(index) {
@@ -247,7 +267,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 } else {
                     Ok(arr.value(index).into_py(py))
                 }
-            },
+            }
             DataType::Boolean => {
                 let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
                 if arr.is_null(index) {
@@ -255,7 +275,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 } else {
                     Ok(arr.value(index).into_py(py))
                 }
-            },
+            }
             DataType::Float64 => {
                 let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
                 if arr.is_null(index) {
@@ -263,7 +283,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 } else {
                     Ok(arr.value(index).into_py(py))
                 }
-            },
+            }
             _ => {
                 // For unsupported types, convert to string representation
                 Ok(format!("Unsupported type: {:?}", array.data_type()).into_py(py))
