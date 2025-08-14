@@ -9,7 +9,6 @@ fn main() {
         // Check if we're cross-compiling to macOS ARM64
         let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
         let is_cross_compiling = target_arch == "aarch64" && cfg!(not(target_arch = "aarch64"));
-
         // Try to find Python framework
         if let Ok(python_lib) = env::var("PYTHON_LIB") {
             // Use the provided library flags
