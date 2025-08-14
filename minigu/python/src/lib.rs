@@ -4,12 +4,11 @@
 
 use arrow::array::*;
 use arrow::datatypes::DataType;
-use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString, PyModule};
-
 use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use minigu_common::data_chunk::DataChunk;
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList, PyModule, PyString};
 
 /// PyMiniGu class that wraps the Rust Database
 #[allow(non_local_definitions)]
