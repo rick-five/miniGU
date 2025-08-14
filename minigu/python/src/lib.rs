@@ -153,7 +153,7 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let _session = self.session.as_mut().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
@@ -161,28 +161,55 @@ impl PyMiniGU {
         if let Ok(list) = data.downcast::<PyList>() {
             println!("Loading {} records", list.len());
 
-            // For now, we'll just print the data as a placeholder
-            // In a real implementation, we would convert this to GQL INSERT statements
-            // and execute them through the session
+            // Build GQL INSERT statements from the Python data
+            let mut insert_statements = Vec::new();
+            
             for item in list.iter() {
                 if let Ok(dict) = item.downcast::<PyDict>() {
-                    // Process each dictionary
+                    // Extract label and properties
+                    let mut label = "Node".to_string();
+                    let mut properties = Vec::new();
+                    
                     for (key, value) in dict.iter() {
                         if let (Ok(key_str), Ok(value_str)) = (
                             key.downcast::<PyString>().map(|s| s.to_string()),
                             value.str().map(|s| s.to_string()),
                         ) {
-                            println!("  {}: {}", key_str, value_str);
+                            if key_str == "label" {
+                                label = value_str;
+                            } else {
+                                // Format property value appropriately
+                                // For simplicity, we'll treat all values as strings for now
+                                properties.push(format!("{}: '{}'", key_str, value_str));
+                            }
                         }
+                    }
+                    
+                    // Create INSERT statement
+                    if !properties.is_empty() {
+                        let props_str = properties.join(", ");
+                        let statement = format!("INSERT VERTEX {} {{{}}};", label, props_str);
+                        insert_statements.push(statement);
                     }
                 }
             }
-
-            // In a real implementation, we would do something like:
-            // 1. Convert the Python data to GQL INSERT statements
-            // 2. Execute those statements through the session
-            // For now, we'll just print a message
-            println!("Data would be loaded into the database");
+            
+            // Execute all INSERT statements
+            for statement in insert_statements {
+                match session.query(&statement) {
+                    Ok(_) => {
+                        println!("Successfully executed: {}", statement);
+                    }
+                    Err(e) => {
+                        return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                            "Failed to execute statement '{}': {}",
+                            statement, e
+                        )));
+                    }
+                }
+            }
+            
+            println!("All data loaded successfully");
             Ok(())
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -217,21 +244,29 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn create_graph(&mut self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // Get the session
-        let _session = self.session.as_mut().ok_or_else(|| {
+        let session = self.session.as_mut().ok_or_else(|| {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
-
-        // For now, we'll just print a message
-        // In a real implementation, we would create the graph through appropriate APIs
-        println!("Creating graph: {} with schema: {:?}", name, schema);
-
-        // Execute a CREATE GRAPH statement if we had that capability
-        // For now, we'll just print a message
-        println!(
-            "Graph '{}' would be created with schema: {:?}",
-            name, schema
-        );
-        Ok(())
+        
+        // Create the graph using the create_test_graph procedure
+        let query = format!("CALL create_test_graph('{}');", name);
+        match session.query(&query) {
+            Ok(_) => {
+                println!("Graph '{}' created successfully", name);
+                
+                // If schema is provided, we could process it here
+                if let Some(schema_str) = schema {
+                    println!("Schema provided but not yet implemented: {}", schema_str);
+                    // In a full implementation, we would parse the schema and add vertex/edge types
+                }
+                
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to create graph '{}': {}",
+                name, e
+            ))),
+        }
     }
 
     /// Insert data
