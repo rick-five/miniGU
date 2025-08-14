@@ -16,7 +16,7 @@ minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
 minigu-storage = { workspace = true }
-pyo3 = { version = "0.20", features = ["extension-module", "abi3-py37"] }
+pyo3 = { version = "0.24.2", features = ["extension-module", "abi3-py37"] }
 serde_json = { workspace = true }
 
 [lints]
