@@ -8,6 +8,9 @@ use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
+// Enable auto-initialize on macOS
+#[cfg(feature = "auto-initialize")]
+use pyo3::prepare_freethreaded_python;
 use pyo3::types::{PyDict, PyList, PyModule, PyString};
 
 /// PyMiniGu class that wraps the Rust Database
