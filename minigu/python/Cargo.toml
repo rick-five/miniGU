@@ -16,7 +16,7 @@ minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
 minigu-storage = { workspace = true }
-pyo3 = { version = "0.24.2", features = ["extension-module", "abi3-py37"] }
+pyo3 = { workspace = true }
 serde_json = { workspace = true }
 
 [lints]
@@ -34,4 +34,4 @@ ignored = [
 
 # Platform-specific features for pyo3
 [target.'cfg(target_os = "macos")'.dependencies]
-pyo3 = { version = "0.24.2", features = ["auto-initialize"] }
+pyo3 = { workspace = true, features = ["auto-initialize"] }
