@@ -11,8 +11,10 @@ use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use minigu_common::data_chunk::DataChunk;
 
-/// PyMiniGU class that wraps the Rust Database
+/// PyMiniGu class that wraps the Rust Database
+#[allow(non_local_definitions)]
 #[pyclass]
+#[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
@@ -30,6 +32,7 @@ impl PyMiniGU {
     }
 
     /// Initialize the database
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
         match Database::open_in_memory(&config) {
@@ -48,6 +51,7 @@ impl PyMiniGU {
     }
 
     /// Execute a GQL query
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn execute(&mut self, query: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
         let session = self.session.as_mut().ok_or_else(|| {
@@ -105,6 +109,7 @@ impl PyMiniGU {
     }
 
     /// Load data from a file
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn load_from_file(&self, path: &str) -> PyResult<()> {
         // TODO: Implement loading data from file
         println!("Loading data from file: {}", path);
@@ -112,6 +117,7 @@ impl PyMiniGU {
     }
 
     /// Load data directly
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&self, data: &PyAny) -> PyResult<()> {
         // TODO: Implement loading data from Python objects
         println!("Loading data from Python objects");
@@ -134,6 +140,7 @@ impl PyMiniGU {
     }
 
     /// Save database to a file
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn save_to_file(&self, path: &str) -> PyResult<()> {
         // TODO: Implement saving database to file
         println!("Saving database to file: {}", path);
@@ -141,6 +148,7 @@ impl PyMiniGU {
     }
 
     /// Create a graph
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn create_graph(&self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // TODO: Implement graph creation
         println!("Creating graph: {} with schema: {:?}", name, schema);
@@ -157,6 +165,7 @@ impl PyMiniGU {
     }
 
     /// Insert data
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn insert_data(&self, data: &str) -> PyResult<()> {
         // TODO: Implement data insertion
         println!("Inserting data: {}", data);
@@ -173,6 +182,7 @@ impl PyMiniGU {
     }
 
     /// Update data
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn update_data(&self, query: &str) -> PyResult<()> {
         // TODO: Implement data update
         println!("Updating data with query: {}", query);
@@ -180,6 +190,7 @@ impl PyMiniGU {
     }
 
     /// Delete data
+    #[allow(unsafe_op_in_unsafe_fn)]
     fn delete_data(&self, query: &str) -> PyResult<()> {
         // TODO: Implement data deletion
         println!("Deleting data with query: {}", query);
