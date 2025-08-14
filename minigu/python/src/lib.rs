@@ -132,7 +132,7 @@ impl PyMiniGU {
 
     /// Load data directly
     #[allow(unsafe_op_in_unsafe_fn)]
-    fn load_data(&self, data: &PyAny) -> PyResult<()> {
+    fn load_data(&self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // TODO: Implement loading data from Python objects
         println!("Loading data from Python objects");
         // Convert Python data to Rust data structures
@@ -294,7 +294,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
 
 /// Python module definition
 #[pymodule]
-fn minigu_python(_py: Python, m: &PyModule) -> PyResult<()> {
+fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMiniGU>()?;
     Ok(())
 }
