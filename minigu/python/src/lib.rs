@@ -248,7 +248,6 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 }
 
 /// Extract a value from an Arrow array at a specific index
-#[allow(deprecated)]
 fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
     Python::with_gil(|py| {
         match array.data_type() {
@@ -273,7 +272,10 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_py(py))
+                    #[allow(deprecated)]
+                    {
+                        Ok(arr.value(index).into_py(py))
+                    }
                 }
             }
             DataType::Float64 => {
