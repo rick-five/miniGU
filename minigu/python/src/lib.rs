@@ -256,7 +256,18 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                    // Special handling for macOS to avoid linking issues
+                    #[cfg(target_os = "macos")]
+                    {
+                        #[allow(deprecated)]
+                        {
+                            Ok(arr.value(index).into_py(py))
+                        }
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                    }
                 }
             }
             DataType::Utf8 => {
@@ -264,7 +275,18 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                    // Special handling for macOS to avoid linking issues
+                    #[cfg(target_os = "macos")]
+                    {
+                        #[allow(deprecated)]
+                        {
+                            Ok(arr.value(index).into_py(py))
+                        }
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                    }
                 }
             }
             DataType::Boolean => {
@@ -283,15 +305,37 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                    // Special handling for macOS to avoid linking issues
+                    #[cfg(target_os = "macos")]
+                    {
+                        #[allow(deprecated)]
+                        {
+                            Ok(arr.value(index).into_py(py))
+                        }
+                    }
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                    }
                 }
             }
             _ => {
                 // For unsupported types, convert to string representation
-                Ok(format!("Unsupported type: {:?}", array.data_type())
-                    .into_pyobject(py)?
-                    .into_any()
-                    .unbind())
+                // Special handling for macOS to avoid linking issues
+                #[cfg(target_os = "macos")]
+                {
+                    #[allow(deprecated)]
+                    {
+                        Ok(format!("Unsupported type: {:?}", array.data_type()).into_py(py))
+                    }
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    Ok(format!("Unsupported type: {:?}", array.data_type())
+                        .into_pyobject(py)?
+                        .into_any()
+                        .unbind())
+                }
             }
         }
     })
