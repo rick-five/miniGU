@@ -7,12 +7,12 @@ fn main() {
         if let Ok(python_lib) = env::var("PYTHON_LIB") {
             // Use the provided library flags
             for flag in python_lib.split_whitespace() {
-                if flag.starts_with("-L") {
-                    println!("cargo:rustc-link-search=native={}", &flag[2..]);
-                } else if flag.starts_with("-l") {
-                    println!("cargo:rustc-link-lib={}", &flag[2..]);
-                } else if flag.starts_with("-framework") {
-                    println!("cargo:rustc-link-lib=framework={}", &flag[11..]);
+                if let Some(lib_path) = flag.strip_prefix("-L") {
+                    println!("cargo:rustc-link-search=native={}", lib_path);
+                } else if let Some(lib_name) = flag.strip_prefix("-l") {
+                    println!("cargo:rustc-link-lib={}", lib_name);
+                } else if let Some(framework_name) = flag.strip_prefix("-framework ") {
+                    println!("cargo:rustc-link-lib=framework={}", framework_name);
                 }
             }
         } else if env::var("PYO3_PYTHON").is_ok() {
