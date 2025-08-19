@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Alice",
+    "age": 30,
+    "label": "Person"
+  },
+  {
+    "name": "Bob",
+    "age": 25,
+    "label": "Person"
+  },
+  {
+    "name": "TechCorp",
+    "founded": 2010,
+    "label": "Company"
+  }
+]

@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 """
-测试miniGU的load和save功能
+Test miniGU's load and save functionality
 """
 
 try:
-    # 尝试导入Rust绑定
+    # Try to import Rust bindings
     from minigu_python import PyMiniGU
     print("Successfully imported PyMiniGU")
     
-    # 创建数据库实例
+    # Create database instance
     db = PyMiniGU()
     print("Created PyMiniGU instance")
     
-    # 测试load_data功能
+    # Test load_data functionality
     test_data = [
         {"name": "Alice", "age": 30, "label": "Person"},
         {"name": "Bob", "age": 25, "label": "Person"},
@@ -24,12 +24,12 @@ try:
     db.load_data(test_data)
     print("load_data test completed")
     
-    # 测试save_to_file功能
+    # Test save_to_file functionality
     print("Testing save_to_file...")
     db.save_to_file("test_database.mgu")
     print("save_to_file test completed")
     
-    # 测试load_from_file功能
+    # Test load_from_file functionality
     print("Testing load_from_file...")
     db.load_from_file("test_database.mgu")
     print("load_from_file test completed")

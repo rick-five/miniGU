@@ -1,5 +1,7 @@
 """
-miniGU Python API
+miniGU Python API Enhanced Version
+
+Adding missing functionality to the existing implementation
 """
 
 import sys
@@ -8,6 +10,8 @@ from pathlib import Path
 import json
 import asyncio
 
+
+# Try to import Rust bindings
 try:
     from . import minigu_python
     from .minigu_python import PyMiniGU
@@ -196,7 +200,7 @@ class AsyncMiniGU:
             if HAS_RUST_BINDINGS:
                 self._rust_instance = PyMiniGU()
                 self._rust_instance.init()
-                # 设置配置选项（仅在同步模式下）
+                # Set configuration options (only in synchronous mode)
                 if not asyncio.iscoroutinefunction(self.set_thread_count):
                     self.set_thread_count(self.thread_count)
                     self.set_cache_size(self.cache_size)
@@ -242,7 +246,6 @@ class AsyncMiniGU:
             
             print(f"Executing query: {query}")
             
-        
             query_lower = query.lower().strip()
             
             if query_lower.startswith("match") or query_lower.startswith("select"):
@@ -614,6 +617,7 @@ class AsyncMiniGU:
         await asyncio.sleep(0.01)
         return Path(nodes, edges)
     
+    # Enhanced features: Performance configuration and statistics methods
     async def set_cache_size(self, size: int) -> None:
         """
         Set the size of the query result cache asynchronously.
@@ -630,15 +634,17 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-
+        # 如果有Rust绑定，调用实际的设置方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_cache_size'):
             try:
-
+                self._rust_instance.set_cache_size(size)
+                self.cache_size = size
                 print(f"Cache size set to {size} entries")
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-
+            # 模拟实现
+            self.cache_size = size
             print(f"Cache size set to {size} entries (simulated)")
     
     async def set_thread_count(self, count: int) -> None:
@@ -657,15 +663,17 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-
+        # 如果有Rust绑定，调用实际的设置方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_thread_count'):
             try:
- 
+                self._rust_instance.set_thread_count(count)
+                self.thread_count = count
                 print(f"Thread count set to {count}")
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-
+            # 模拟实现
+            self.thread_count = count
             print(f"Thread count set to {count} (simulated)")
     
     async def enable_query_logging(self, enable: bool = True) -> None:
@@ -684,15 +692,18 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-
+        # 如果有Rust绑定，调用实际的设置方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'enable_query_logging'):
             try:
+                self._rust_instance.enable_query_logging(enable)
+                self.enable_logging = enable
                 status = "enabled" if enable else "disabled"
                 print(f"Query logging {status}")
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-
+            # 模拟实现
+            self.enable_logging = enable
             status = "enabled" if enable else "disabled"
             print(f"Query logging {status} (simulated)")
     
@@ -712,22 +723,15 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-
+        # 如果有Rust绑定，调用实际的获取方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'get_performance_stats'):
             try:
-                
-                stats = {
-                    "cache_hits": 0,
-                    "cache_misses": 0,
-                    "query_count": 0,
-                    "total_query_time_ms": 0.0,
-                    "average_query_time_ms": 0.0
-                }
+                stats = self._rust_instance.get_performance_stats()
                 return stats
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-
+            # 模拟实现
             stats = {
                 "cache_hits": 0,
                 "cache_misses": 0,
@@ -747,12 +751,25 @@ class AsyncMiniGU:
             self.is_connected = False
             print("Database connection closed")
     
+    # 异步上下文管理器方法
     async def __aenter__(self):
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        return False  
+        await self.close()
+        return False
+
+    async def close(self) -> None:
+        """
+        Close database connection asynchronously.
+        """
+        if self.is_connected:
+            if HAS_RUST_BINDINGS and self._rust_instance:
+                self._rust_instance.close()
+            self.is_connected = False
+            print("Database connection closed")
+        # 确保方法返回一个awaitable对象
+        await asyncio.sleep(0)  
 
 
 class MiniGU:
@@ -846,7 +863,6 @@ class MiniGU:
                     {"name": "properties", "type": "Map"}
                 ]
                 
-
                 if self._stored_data:
                     data = []
                     for i, item in enumerate(self._stored_data):
@@ -1048,15 +1064,17 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定设置缓存大小
+        # 如果有Rust绑定，调用实际的设置方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_cache_size'):
             try:
-               
+                self._rust_instance.set_cache_size(size)
+                self.cache_size = size
                 print(f"Cache size set to {size} entries")
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            
+            # 模拟实现
+            self.cache_size = size
             print(f"Cache size set to {size} entries (simulated)")
     
     def set_thread_count(self, count: int) -> None:
@@ -1072,15 +1090,17 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-           
+        # 如果有Rust绑定，调用实际的设置方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_thread_count'):
             try:
-                
+                self._rust_instance.set_thread_count(count)
+                self.thread_count = count
                 print(f"Thread count set to {count}")
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            
+            # 模拟实现
+            self.thread_count = count
             print(f"Thread count set to {count} (simulated)")
     
     def enable_query_logging(self, enable: bool = True) -> None:
@@ -1096,16 +1116,18 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-           
+        # 如果有Rust绑定，调用实际的设置方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'enable_query_logging'):
             try:
-                
+                self._rust_instance.enable_query_logging(enable)
+                self.enable_logging = enable
                 status = "enabled" if enable else "disabled"
                 print(f"Query logging {status}")
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-
+            # 模拟实现
+            self.enable_logging = enable
             status = "enabled" if enable else "disabled"
             print(f"Query logging {status} (simulated)")
     
@@ -1122,22 +1144,15 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-
+        # 如果有Rust绑定，调用实际的获取方法
+        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'get_performance_stats'):
             try:
-
-                stats = {
-                    "cache_hits": 0,
-                    "cache_misses": 0,
-                    "query_count": 0,
-                    "total_query_time_ms": 0.0,
-                    "average_query_time_ms": 0.0
-                }
+                stats = self._rust_instance.get_performance_stats()
                 return stats
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-
+            # 模拟实现
             stats = {
                 "cache_hits": 0,
                 "cache_misses": 0,
@@ -1162,25 +1177,20 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-
             try:
                 if isinstance(data, str):
-
                     self._rust_instance.insert_data(data)
                 else:
-
                     gql_data = self._format_insert_data(data)
                     self._rust_instance.insert_data(gql_data)
                 print(f"Data inserted successfully")
             except Exception as e:
                 raise DataError(f"Data insertion failed: {str(e)}")
         else:
-
             if isinstance(data, str):
                 print(f"Executing INSERT statement: {data}")
             else:
                 print(f"Inserting {len(data)} records")
-
                 if isinstance(data, list):
                     self._stored_data.extend(data)
             print("Data inserted (simulated)")
@@ -1195,7 +1205,6 @@ class MiniGU:
         Returns:
             GQL INSERT statement fragment
         """
-
         records = []
         for item in data:
             label = item.get("label", "Node")
@@ -1260,14 +1269,12 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定执行更新
             try:
                 self._rust_instance.update_data(query)
                 print(f"Data updated successfully with query: {query}")
             except Exception as e:
                 raise QueryError(f"Data update failed: {str(e)}")
         else:
-            # 模拟更新过程
             print(f"Executing UPDATE statement: {query}")
             print("Data updated (simulated)")
     
@@ -1286,14 +1293,12 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定执行删除
             try:
                 self._rust_instance.delete_data(query)
                 print(f"Data deleted successfully with query: {query}")
             except Exception as e:
                 raise QueryError(f"Data deletion failed: {str(e)}")
         else:
-            # 模拟删除过程
             print(f"Executing DELETE statement: {query}")
             print("Data deleted (simulated)")
     
