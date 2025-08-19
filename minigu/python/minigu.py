@@ -8,7 +8,6 @@ from pathlib import Path
 import json
 import asyncio
 
-# 尝试导入Rust绑定
 try:
     from . import minigu_python
     from .minigu_python import PyMiniGU
@@ -183,7 +182,7 @@ class AsyncMiniGU:
         self.enable_logging = enable_logging
         self._rust_instance = None
         self.is_connected = False
-        self._stored_data = []  # 用于模拟存储数据
+        self._stored_data = []
         self._connect()
     
     def _connect(self) -> None:
@@ -221,17 +220,17 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             QueryError: Raised when query execution fails
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定执行查询
+            
             try:
                 result = self._rust_instance.execute(query)
-                # 将Rust返回的结果转换为Python对象
+                
                 return QueryResult(
                     schema=result.get("schema", []),
                     data=result.get("data", []),
@@ -240,27 +239,27 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            # 模拟查询过程
+            
             print(f"Executing query: {query}")
             
-            # 解析查询类型并模拟结果
+        
             query_lower = query.lower().strip()
             
             if query_lower.startswith("match") or query_lower.startswith("select"):
-                # 模拟图查询结果
+                
                 schema = [
                     {"name": "node_id", "type": "Integer"},
                     {"name": "node_label", "type": "String"},
                     {"name": "properties", "type": "Map"}
                 ]
                 
-                # 如果有存储的数据，返回它
+                
                 if self._stored_data:
                     data = []
                     for i, item in enumerate(self._stored_data):
                         data.append([i+1, item.get("label", "Node"), item])
                 else:
-                    # 默认数据
+        
                     data = [
                         [1, "Person", {"name": "Alice", "age": 30}],
                         [2, "Person", {"name": "Bob", "age": 25}],
@@ -274,7 +273,7 @@ class AsyncMiniGU:
                 }
                 return QueryResult(schema, data, metrics)
             elif "count" in query_lower:
-                # 模拟计数查询
+
                 schema = [
                     {"name": "count", "type": "Integer"}
                 ]
@@ -286,19 +285,19 @@ class AsyncMiniGU:
                 }
                 return QueryResult(schema, data, metrics)
             elif query_lower.startswith("create graph"):
-                # 模拟创建图
+    
                 print("Graph created (simulated)")
                 return QueryResult()
             elif query_lower.startswith("insert"):
-                # 模拟插入数据
+    
                 print("Data inserted (simulated)")
                 return QueryResult()
             elif query_lower.startswith("delete"):
-                # 模拟删除数据
+    
                 print("Data deleted (simulated)")
                 return QueryResult()
             else:
-                # 模拟其他操作结果
+        
                 return QueryResult()
     
     async def load(self, data: Union[List[Dict], str, Path]) -> None:
@@ -312,32 +311,32 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             DataError: Raised when data loading fails
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定加载数据
+    
             try:
                 if isinstance(data, (str, Path)):
-                    # 如果是文件路径，读取文件
+                    
                     self._rust_instance.load_from_file(str(data))
                 else:
-                    # 如果是数据对象，直接加载
+                    
                     self._rust_instance.load_data(data)
-                    # 保存数据用于模拟
+                
                     self._stored_data = data
                 print(f"Data loaded successfully")
             except Exception as e:
                 raise DataError(f"Data loading failed: {str(e)}")
         else:
-            # 模拟加载过程
+    
             if isinstance(data, (str, Path)):
                 file_path = str(data)
                 print(f"Loading data from file: {file_path}")
-                # 尝试读取JSON文件
+        
                 if file_path.endswith('.json'):
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
@@ -364,29 +363,29 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             DataError: Raised when save fails
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定保存数据
+    
             try:
                 self._rust_instance.save_to_file(path)
                 print(f"Database saved to {path}")
             except Exception as e:
                 raise DataError(f"Database save failed: {str(e)}")
         else:
-            # 模拟保存过程
+            
             try:
-                # 如果有数据，保存为JSON格式
+            
                 if self._stored_data:
                     with open(path, 'w', encoding='utf-8') as f:
                         json.dump(self._stored_data, f, ensure_ascii=False, indent=2)
                     print(f"Database saved to {path} as JSON")
                 else:
-                    # 创建空文件
+                
                     with open(path, 'w') as f:
                         f.write("")
                     print(f"Empty database saved to {path}")
@@ -405,14 +404,14 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             GraphError: Raised when graph creation fails
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定创建图
+
             try:
                 if schema:
                     schema_str = self._format_schema(schema)
@@ -423,13 +422,13 @@ class AsyncMiniGU:
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
-            # 模拟创建图过程
+    
             if schema:
                 query = f"CREATE GRAPH {graph_name} {{ {self._format_schema(schema)} }}"
             else:
                 query = f"CREATE GRAPH {graph_name} ANY"
             
-            # 执行查询
+        
             await self.execute(query)
             print(f"Graph '{graph_name}' created (simulated)")
     
@@ -443,7 +442,7 @@ class AsyncMiniGU:
         Returns:
             Formatted schema string
         """
-        # 简单实现，实际应该更复杂
+        
         elements = []
         for label, properties in schema.items():
             props = ", ".join([f"{name} {ptype}" for name, ptype in properties.items()])
@@ -461,32 +460,32 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             DataError: Raised when data insertion fails
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定插入数据
+        
             try:
                 if isinstance(data, str):
-                    # 如果是字符串，直接作为GQL INSERT语句执行
+                    
                     self._rust_instance.insert_data(data)
                 else:
-                    # 如果是数据对象，转换为GQL INSERT语句
+                    
                     gql_data = self._format_insert_data(data)
                     self._rust_instance.insert_data(gql_data)
                 print(f"Data inserted successfully")
             except Exception as e:
                 raise DataError(f"Data insertion failed: {str(e)}")
         else:
-            # 模拟插入过程
+
             if isinstance(data, str):
                 print(f"Executing INSERT statement: {data}")
             else:
                 print(f"Inserting {len(data)} records")
-                # 复用load方法添加数据
+                
                 if isinstance(data, list):
                     self._stored_data.extend(data)
             print("Data inserted (simulated)")
@@ -501,7 +500,7 @@ class AsyncMiniGU:
         Returns:
             GQL INSERT statement fragment
         """
-        # 简单实现，实际应该更复杂
+    
         records = []
         for item in data:
             label = item.get("label", "Node")
@@ -520,21 +519,21 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             QueryError: Raised when query execution fails
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定执行更新
+        
             try:
                 self._rust_instance.update_data(query)
                 print(f"Data updated successfully with query: {query}")
             except Exception as e:
                 raise QueryError(f"Data update failed: {str(e)}")
         else:
-            # 模拟更新过程
+    
             print(f"Executing UPDATE statement: {query}")
             print("Data updated (simulated)")
     
@@ -549,21 +548,21 @@ class AsyncMiniGU:
             MiniGUError: Raised when database is not connected
             QueryError: Raised when query execution fails
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定执行删除
+            
             try:
                 self._rust_instance.delete_data(query)
                 print(f"Data deleted successfully with query: {query}")
             except Exception as e:
                 raise QueryError(f"Data deletion failed: {str(e)}")
         else:
-            # 模拟删除过程
+
             print(f"Executing DELETE statement: {query}")
             print("Data deleted (simulated)")
     
@@ -578,7 +577,7 @@ class AsyncMiniGU:
         Returns:
             Node object
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         return Node(label, properties)
     
@@ -596,7 +595,7 @@ class AsyncMiniGU:
         Returns:
             Edge object
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         return Edge(label, src, dst, properties)
     
@@ -611,7 +610,7 @@ class AsyncMiniGU:
         Returns:
             Path object
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         return Path(nodes, edges)
     
@@ -625,21 +624,21 @@ class AsyncMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定设置缓存大小
+
             try:
-                # 这里应该调用Rust方法来设置缓存大小
+
                 print(f"Cache size set to {size} entries")
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            # 模拟设置缓存大小
+
             print(f"Cache size set to {size} entries (simulated)")
     
     async def set_thread_count(self, count: int) -> None:
@@ -652,21 +651,21 @@ class AsyncMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
         """
-        # 模拟异步操作
+        
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定设置线程数
+
             try:
-                # 这里应该调用Rust方法来设置线程数
+ 
                 print(f"Thread count set to {count}")
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            # 模拟设置线程数
+
             print(f"Thread count set to {count} (simulated)")
     
     async def enable_query_logging(self, enable: bool = True) -> None:
@@ -679,22 +678,21 @@ class AsyncMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定启用/禁用查询日志
+
             try:
-                # 这里应该调用Rust方法来启用/禁用查询日志
                 status = "enabled" if enable else "disabled"
                 print(f"Query logging {status}")
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-            # 模拟启用/禁用查询日志
+
             status = "enabled" if enable else "disabled"
             print(f"Query logging {status} (simulated)")
     
@@ -708,16 +706,16 @@ class AsyncMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
         """
-        # 模拟异步操作
+
         await asyncio.sleep(0.01)
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定获取性能统计信息
+
             try:
-                # 这里应该调用Rust方法来获取性能统计信息
+                
                 stats = {
                     "cache_hits": 0,
                     "cache_misses": 0,
@@ -729,7 +727,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-            # 模拟获取性能统计信息
+
             stats = {
                 "cache_hits": 0,
                 "cache_misses": 0,
@@ -754,7 +752,7 @@ class AsyncMiniGU:
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.close()
-        return False  # 不抑制异常
+        return False  
 
 
 class MiniGU:
@@ -788,7 +786,7 @@ class MiniGU:
         self.enable_logging = enable_logging
         self._rust_instance = None
         self.is_connected = False
-        self._stored_data = []  # 用于模拟存储数据
+        self._stored_data = []
         self._connect()
     
     def _connect(self) -> None:
@@ -822,10 +820,10 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定执行查询
+            
             try:
                 result = self._rust_instance.execute(query)
-                # 将Rust返回的结果转换为Python对象
+        
                 return QueryResult(
                     schema=result.get("schema", []),
                     data=result.get("data", []),
@@ -834,27 +832,27 @@ class MiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            # 模拟查询过程
+            
             print(f"Executing query: {query}")
             
-            # 解析查询类型并模拟结果
+
             query_lower = query.lower().strip()
             
             if query_lower.startswith("match") or query_lower.startswith("select"):
-                # 模拟图查询结果
+
                 schema = [
                     {"name": "node_id", "type": "Integer"},
                     {"name": "node_label", "type": "String"},
                     {"name": "properties", "type": "Map"}
                 ]
                 
-                # 如果有存储的数据，返回它
+
                 if self._stored_data:
                     data = []
                     for i, item in enumerate(self._stored_data):
                         data.append([i+1, item.get("label", "Node"), item])
                 else:
-                    # 默认数据
+
                     data = [
                         [1, "Person", {"name": "Alice", "age": 30}],
                         [2, "Person", {"name": "Bob", "age": 25}],
@@ -868,7 +866,7 @@ class MiniGU:
                 }
                 return QueryResult(schema, data, metrics)
             elif "count" in query_lower:
-                # 模拟计数查询
+               
                 schema = [
                     {"name": "count", "type": "Integer"}
                 ]
@@ -880,19 +878,19 @@ class MiniGU:
                 }
                 return QueryResult(schema, data, metrics)
             elif query_lower.startswith("create graph"):
-                # 模拟创建图
+               
                 print("Graph created (simulated)")
                 return QueryResult()
             elif query_lower.startswith("insert"):
-                # 模拟插入数据
+               
                 print("Data inserted (simulated)")
                 return QueryResult()
             elif query_lower.startswith("delete"):
-                # 模拟删除数据
+               
                 print("Data deleted (simulated)")
                 return QueryResult()
             else:
-                # 模拟其他操作结果
+                
                 return QueryResult()
     
     def load(self, data: Union[List[Dict], str, Path]) -> None:
@@ -910,25 +908,25 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定加载数据
+           
             try:
                 if isinstance(data, (str, Path)):
-                    # 如果是文件路径，读取文件
+                   
                     self._rust_instance.load_from_file(str(data))
                 else:
-                    # 如果是数据对象，直接加载
+                   
                     self._rust_instance.load_data(data)
-                    # 保存数据用于模拟
+                    
                     self._stored_data = data
                 print(f"Data loaded successfully")
             except Exception as e:
                 raise DataError(f"Data loading failed: {str(e)}")
         else:
-            # 模拟加载过程
+           
             if isinstance(data, (str, Path)):
                 file_path = str(data)
                 print(f"Loading data from file: {file_path}")
-                # 尝试读取JSON文件
+                
                 if file_path.endswith('.json'):
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
@@ -961,22 +959,22 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定保存数据
+          
             try:
                 self._rust_instance.save_to_file(path)
                 print(f"Database saved to {path}")
             except Exception as e:
                 raise DataError(f"Database save failed: {str(e)}")
         else:
-            # 模拟保存过程
+           
             try:
-                # 如果有数据，保存为JSON格式
+                
                 if self._stored_data:
                     with open(path, 'w', encoding='utf-8') as f:
                         json.dump(self._stored_data, f, ensure_ascii=False, indent=2)
                     print(f"Database saved to {path} as JSON")
                 else:
-                    # 创建空文件
+                    
                     with open(path, 'w') as f:
                         f.write("")
                     print(f"Empty database saved to {path}")
@@ -999,7 +997,7 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定创建图
+          
             try:
                 if schema:
                     schema_str = self._format_schema(schema)
@@ -1010,13 +1008,13 @@ class MiniGU:
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
-            # 模拟创建图过程
+          
             if schema:
                 query = f"CREATE GRAPH {graph_name} {{ {self._format_schema(schema)} }}"
             else:
                 query = f"CREATE GRAPH {graph_name} ANY"
             
-            # 执行查询
+           
             self.execute(query)
             print(f"Graph '{graph_name}' created (simulated)")
     
@@ -1030,7 +1028,7 @@ class MiniGU:
         Returns:
             Formatted schema string
         """
-        # 简单实现，实际应该更复杂
+       
         elements = []
         for label, properties in schema.items():
             props = ", ".join([f"{name} {ptype}" for name, ptype in properties.items()])
@@ -1053,12 +1051,12 @@ class MiniGU:
         if HAS_RUST_BINDINGS and self._rust_instance:
             # 使用真实的Rust绑定设置缓存大小
             try:
-                # 这里应该调用Rust方法来设置缓存大小
+               
                 print(f"Cache size set to {size} entries")
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            # 模拟设置缓存大小
+            
             print(f"Cache size set to {size} entries (simulated)")
     
     def set_thread_count(self, count: int) -> None:
@@ -1075,14 +1073,14 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定设置线程数
+           
             try:
-                # 这里应该调用Rust方法来设置线程数
+                
                 print(f"Thread count set to {count}")
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            # 模拟设置线程数
+            
             print(f"Thread count set to {count} (simulated)")
     
     def enable_query_logging(self, enable: bool = True) -> None:
@@ -1099,15 +1097,15 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定启用/禁用查询日志
+           
             try:
-                # 这里应该调用Rust方法来启用/禁用查询日志
+                
                 status = "enabled" if enable else "disabled"
                 print(f"Query logging {status}")
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-            # 模拟启用/禁用查询日志
+
             status = "enabled" if enable else "disabled"
             print(f"Query logging {status} (simulated)")
     
@@ -1125,9 +1123,9 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定获取性能统计信息
+
             try:
-                # 这里应该调用Rust方法来获取性能统计信息
+
                 stats = {
                     "cache_hits": 0,
                     "cache_misses": 0,
@@ -1139,7 +1137,7 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-            # 模拟获取性能统计信息
+
             stats = {
                 "cache_hits": 0,
                 "cache_misses": 0,
@@ -1164,25 +1162,25 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            # 使用真实的Rust绑定插入数据
+
             try:
                 if isinstance(data, str):
-                    # 如果是字符串，直接作为GQL INSERT语句执行
+
                     self._rust_instance.insert_data(data)
                 else:
-                    # 如果是数据对象，转换为GQL INSERT语句
+
                     gql_data = self._format_insert_data(data)
                     self._rust_instance.insert_data(gql_data)
                 print(f"Data inserted successfully")
             except Exception as e:
                 raise DataError(f"Data insertion failed: {str(e)}")
         else:
-            # 模拟插入过程
+
             if isinstance(data, str):
                 print(f"Executing INSERT statement: {data}")
             else:
                 print(f"Inserting {len(data)} records")
-                # 复用load方法添加数据
+
                 if isinstance(data, list):
                     self._stored_data.extend(data)
             print("Data inserted (simulated)")
@@ -1197,7 +1195,7 @@ class MiniGU:
         Returns:
             GQL INSERT statement fragment
         """
-        # 简单实现，实际应该更复杂
+
         records = []
         for item in data:
             label = item.get("label", "Node")
