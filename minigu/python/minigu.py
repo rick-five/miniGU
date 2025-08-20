@@ -24,6 +24,8 @@ except (ImportError, ModuleNotFoundError):
         HAS_RUST_BINDINGS = True
     except (ImportError, ModuleNotFoundError):
         HAS_RUST_BINDINGS = False
+        # 不再提供模拟实现的警告，直接抛出异常
+        raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
         print("Warning: Rust bindings not available. Using simulated implementation.")
 
 
@@ -243,65 +245,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            
-            print(f"Executing query: {query}")
-            
-            query_lower = query.lower().strip()
-            
-            if query_lower.startswith("match") or query_lower.startswith("select"):
-                
-                schema = [
-                    {"name": "node_id", "type": "Integer"},
-                    {"name": "node_label", "type": "String"},
-                    {"name": "properties", "type": "Map"}
-                ]
-                
-                
-                if self._stored_data:
-                    data = []
-                    for i, item in enumerate(self._stored_data):
-                        data.append([i+1, item.get("label", "Node"), item])
-                else:
-        
-                    data = [
-                        [1, "Person", {"name": "Alice", "age": 30}],
-                        [2, "Person", {"name": "Bob", "age": 25}],
-                        [3, "Company", {"name": "TechCorp", "founded": 2010}]
-                    ]
-                    
-                metrics = {
-                    "parsing_time_ms": 0.1,
-                    "planning_time_ms": 0.3,
-                    "execution_time_ms": 1.2
-                }
-                return QueryResult(schema, data, metrics)
-            elif "count" in query_lower:
-
-                schema = [
-                    {"name": "count", "type": "Integer"}
-                ]
-                data = [[len(self._stored_data)]] if self._stored_data else [[0]]
-                metrics = {
-                    "parsing_time_ms": 0.05,
-                    "planning_time_ms": 0.1,
-                    "execution_time_ms": 0.2
-                }
-                return QueryResult(schema, data, metrics)
-            elif query_lower.startswith("create graph"):
-    
-                print("Graph created (simulated)")
-                return QueryResult()
-            elif query_lower.startswith("insert"):
-    
-                print("Data inserted (simulated)")
-                return QueryResult()
-            elif query_lower.startswith("delete"):
-    
-                print("Data deleted (simulated)")
-                return QueryResult()
-            else:
-        
-                return QueryResult()
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
@@ -324,18 +269,29 @@ class AsyncMiniGU:
     
             try:
                 if isinstance(data, (str, Path)):
+                    # Convert path to string and load from file
+                    file_path = str(data)
+                    if not Path(file_path).exists():
+                        raise DataError(f"File not found: {file_path}")
                     
-                    self._rust_instance.load_from_file(str(data))
+                    self._rust_instance.load_from_file(file_path)
                 else:
+                    # Validate input data format
+                    if not isinstance(data, list):
+                        raise DataError("Data must be a list of dictionaries")
+                    
+                    for item in data:
+                        if not isinstance(item, dict):
+                            raise DataError("Each item in data list must be a dictionary")
                     
                     self._rust_instance.load_data(data)
-                
                     self._stored_data = data
+                
                 print(f"Data loaded successfully")
             except Exception as e:
                 raise DataError(f"Data loading failed: {str(e)}")
         else:
-    
+            # Simulated implementation for when Rust bindings are not available
             if isinstance(data, (str, Path)):
                 file_path = str(data)
                 print(f"Loading data from file: {file_path}")
@@ -344,16 +300,35 @@ class AsyncMiniGU:
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             file_data = json.load(f)
+                            
+                            if not isinstance(file_data, list):
+                                raise DataError("JSON file must contain a list of objects")
+                            
+                            for item in file_data:
+                                if not isinstance(item, dict):
+                                    raise DataError("JSON file must contain a list of objects")
+                            
                             self._stored_data = file_data
                             print(f"Loaded {len(file_data)} records from JSON file")
+                    except FileNotFoundError:
+                        raise DataError(f"File not found: {file_path}")
+                    except json.JSONDecodeError:
+                        raise DataError(f"Invalid JSON format in file: {file_path}")
                     except Exception as e:
-                        print(f"Warning: Could not parse JSON file: {e}")
+                        raise DataError(f"Could not load data from file: {str(e)}")
                 else:
-                    print("File format not recognized, treating as generic file load")
+                    raise DataError(f"Unsupported file format: {Path(file_path).suffix[1:]}")
             else:
+                if not isinstance(data, list):
+                    raise DataError("Data must be a list of dictionaries")
+                
+                for item in data:
+                    if not isinstance(item, dict):
+                        raise DataError("Each item in data list must be a dictionary")
+                
                 self._stored_data = data
                 print(f"Loading {len(data)} records into database")
-            print("Data loaded (simulated)")
+            print("Data loaded successfully")
     
     async def save(self, path: str) -> None:
         """
@@ -380,20 +355,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Database save failed: {str(e)}")
         else:
-            
-            try:
-            
-                if self._stored_data:
-                    with open(path, 'w', encoding='utf-8') as f:
-                        json.dump(self._stored_data, f, ensure_ascii=False, indent=2)
-                    print(f"Database saved to {path} as JSON")
-                else:
-                
-                    with open(path, 'w') as f:
-                        f.write("")
-                    print(f"Empty database saved to {path}")
-            except Exception as e:
-                raise DataError(f"Database save failed: {str(e)}")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def create_graph(self, graph_name: str, schema: Optional[Dict] = None) -> None:
         """
@@ -425,15 +388,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
-    
-            if schema:
-                query = f"CREATE GRAPH {graph_name} {{ {self._format_schema(schema)} }}"
-            else:
-                query = f"CREATE GRAPH {graph_name} ANY"
-            
-        
-            await self.execute(query)
-            print(f"Graph '{graph_name}' created (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     def _format_schema(self, schema: Dict) -> str:
         """
@@ -477,7 +433,7 @@ class AsyncMiniGU:
                     self._rust_instance.insert_data(data)
                 else:
                     
-                    gql_data = self._format_insert_data(data)
+                    gql_data = await self._format_insert_data(data)
                     self._rust_instance.insert_data(gql_data)
                 print(f"Data inserted successfully")
             except Exception as e:
@@ -503,13 +459,32 @@ class AsyncMiniGU:
         Returns:
             GQL INSERT statement fragment
         """
-    
-        records = []
+        # Based on the GQL examples, we should use :Label syntax instead of (Label)
+        # and generate separate INSERT statements for each record
+        statements = []
         for item in data:
             label = item.get("label", "Node")
-            props = ", ".join([f"{k}: '{v}'" for k, v in item.items() if k != "label"])
-            records.append(f"({label} {{{props}}})")
-        return ", ".join(records)
+            # Format properties correctly for GQL
+            # Based on examples, we should not put quotes around all values
+            props = []
+            for k, v in item.items():
+                if k != "label":
+                    # Handle different data types appropriately
+                    if isinstance(v, str):
+                        props.append(f"{k}: '{v}'")
+                    elif isinstance(v, (int, float)):
+                        props.append(f"{k}: {v}")
+                    else:
+                        # For other types, convert to string and quote
+                        props.append(f"{k}: '{str(v)}'")
+            
+            props_str = ", ".join(props)
+            # Based on GQL examples, use :Label syntax and separate INSERT statements
+            statement = f"INSERT :{label} {{ {props_str} }}"
+            statements.append(statement)
+            
+        # Join statements with semicolon and space
+        return "; ".join(statements)
     
     async def update(self, query: str) -> None:
         """
@@ -565,9 +540,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Data deletion failed: {str(e)}")
         else:
-
-            print(f"Executing DELETE statement: {query}")
-            print("Data deleted (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def create_node(self, label: str, properties: Optional[Dict[str, Any]] = None) -> Node:
         """
@@ -643,9 +617,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            # 模拟实现
-            self.cache_size = size
-            print(f"Cache size set to {size} entries (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def set_thread_count(self, count: int) -> None:
         """
@@ -672,9 +645,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            # 模拟实现
-            self.thread_count = count
-            print(f"Thread count set to {count} (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def enable_query_logging(self, enable: bool = True) -> None:
         """
@@ -702,10 +674,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-            # 模拟实现
-            self.enable_logging = enable
-            status = "enabled" if enable else "disabled"
-            print(f"Query logging {status} (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def get_performance_stats(self) -> Dict[str, Any]:
         """
@@ -814,6 +784,8 @@ class MiniGU:
             if HAS_RUST_BINDINGS:
                 self._rust_instance = PyMiniGU()
                 self._rust_instance.init()
+            else:
+                raise ConnectionError("Rust bindings not available")
             self.is_connected = True
             print("Database connected")
         except Exception as e:
@@ -924,41 +896,17 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-           
             try:
                 if isinstance(data, (str, Path)):
-                   
                     self._rust_instance.load_from_file(str(data))
                 else:
-                   
                     self._rust_instance.load_data(data)
-                    
-                    self._stored_data = data
                 print(f"Data loaded successfully")
             except Exception as e:
                 raise DataError(f"Data loading failed: {str(e)}")
         else:
-           
-            if isinstance(data, (str, Path)):
-                file_path = str(data)
-                print(f"Loading data from file: {file_path}")
-                
-                if file_path.endswith('.json'):
-                    try:
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            file_data = json.load(f)
-                            self._stored_data = file_data
-                            print(f"Loaded {len(file_data)} records from JSON file")
-                    except FileNotFoundError as e:
-                        raise DataError(f"File not found: {file_path}") from e
-                    except Exception as e:
-                        raise DataError(f"Could not parse JSON file: {e}") from e
-                else:
-                    print("File format not recognized, treating as generic file load")
-            else:
-                self._stored_data = data
-                print(f"Loading {len(data)} records into database")
-            print("Data loaded (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     def save(self, path: str) -> None:
         """
@@ -1073,9 +1021,8 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            # 模拟实现
-            self.cache_size = size
-            print(f"Cache size set to {size} entries (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     def set_thread_count(self, count: int) -> None:
         """
@@ -1181,19 +1128,16 @@ class MiniGU:
                 if isinstance(data, str):
                     self._rust_instance.insert_data(data)
                 else:
-                    gql_data = self._format_insert_data(data)
-                    self._rust_instance.insert_data(gql_data)
+                    # Format each record and insert as separate statements
+                    for item in data:
+                        gql_data = self._format_insert_data([item])
+                        self._rust_instance.insert_data(gql_data)
                 print(f"Data inserted successfully")
             except Exception as e:
                 raise DataError(f"Data insertion failed: {str(e)}")
         else:
-            if isinstance(data, str):
-                print(f"Executing INSERT statement: {data}")
-            else:
-                print(f"Inserting {len(data)} records")
-                if isinstance(data, list):
-                    self._stored_data.extend(data)
-            print("Data inserted (simulated)")
+            # 移除模拟实现，只保留真实功能
+            raise RuntimeError("Rust bindings required for database operations")
     
     def _format_insert_data(self, data: List[Dict]) -> str:
         """
@@ -1205,12 +1149,32 @@ class MiniGU:
         Returns:
             GQL INSERT statement fragment
         """
-        records = []
+        # Based on the GQL examples, we should use :Label syntax instead of (Label)
+        # and generate separate INSERT statements for each record
+        statements = []
         for item in data:
             label = item.get("label", "Node")
-            props = ", ".join([f"{k}: '{v}'" for k, v in item.items() if k != "label"])
-            records.append(f"({label} {{{props}}})")
-        return ", ".join(records)
+            # Format properties correctly for GQL
+            # Based on examples, we should not put quotes around all values
+            props = []
+            for k, v in item.items():
+                if k != "label":
+                    # Handle different data types appropriately
+                    if isinstance(v, str):
+                        props.append(f"{k}: '{v}'")
+                    elif isinstance(v, (int, float)):
+                        props.append(f"{k}: {v}")
+                    else:
+                        # For other types, convert to string and quote
+                        props.append(f"{k}: '{str(v)}'")
+            
+            props_str = ", ".join(props)
+            # Based on GQL examples, use :Label syntax and separate INSERT statements
+            statement = f"INSERT :{label} {{ {props_str} }}"
+            statements.append(statement)
+            
+        # Join statements with semicolon and space
+        return "; ".join(statements)
     
     def create_node(self, label: str, properties: Optional[Dict[str, Any]] = None) -> Node:
         """
