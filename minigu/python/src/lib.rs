@@ -179,8 +179,9 @@ impl PyMiniGU {
                                 label = value_str;
                             } else {
                                 // Format property value appropriately
-                                // Based on GQL examples, we need to handle different types correctly
-                                // For now, we'll try to determine if it's a number or string
+                                // Based on GQL examples, we need to handle different types
+                                // correctly. For now, we'll try to determine if it's a number
+                                // or string
                                 if let Ok(int_val) = value_str.parse::<i64>() {
                                     properties.push(format!("{}: {}", key_str, int_val));
                                 } else if let Ok(float_val) = value_str.parse::<f64>() {
