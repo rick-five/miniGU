@@ -540,7 +540,6 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Data deletion failed: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
             raise RuntimeError("Rust bindings required for database operations")
     
     async def create_node(self, label: str, properties: Optional[Dict[str, Any]] = None) -> Node:
@@ -608,7 +607,6 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的设置方法
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_cache_size'):
             try:
                 self._rust_instance.set_cache_size(size)
@@ -617,7 +615,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+            
             raise RuntimeError("Rust bindings required for database operations")
     
     async def set_thread_count(self, count: int) -> None:
@@ -636,7 +634,7 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的设置方法
+        
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_thread_count'):
             try:
                 self._rust_instance.set_thread_count(count)
@@ -645,7 +643,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+            
             raise RuntimeError("Rust bindings required for database operations")
     
     async def enable_query_logging(self, enable: bool = True) -> None:
@@ -664,7 +662,7 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的设置方法
+        
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'enable_query_logging'):
             try:
                 self._rust_instance.enable_query_logging(enable)
@@ -674,7 +672,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+        
             raise RuntimeError("Rust bindings required for database operations")
     
     async def get_performance_stats(self) -> Dict[str, Any]:
@@ -693,7 +691,7 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的获取方法
+        
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'get_performance_stats'):
             try:
                 stats = self._rust_instance.get_performance_stats()
@@ -701,7 +699,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-            # 模拟实现
+    
             stats = {
                 "cache_hits": 0,
                 "cache_misses": 0,
@@ -721,7 +719,7 @@ class AsyncMiniGU:
             self.is_connected = False
             print("Database connection closed")
     
-    # 异步上下文管理器方法
+    
     async def __aenter__(self):
         return self
     
@@ -738,7 +736,7 @@ class AsyncMiniGU:
                 self._rust_instance.close()
             self.is_connected = False
             print("Database connection closed")
-        # 确保方法返回一个awaitable对象
+        
         await asyncio.sleep(0)  
 
 
@@ -905,7 +903,7 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Data loading failed: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+    
             raise RuntimeError("Rust bindings required for database operations")
     
     def save(self, path: str) -> None:
@@ -1011,8 +1009,7 @@ class MiniGU:
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
-        
-        # 如果有Rust绑定，调用实际的设置方法
+    
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_cache_size'):
             try:
                 self._rust_instance.set_cache_size(size)
@@ -1021,7 +1018,7 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+            
             raise RuntimeError("Rust bindings required for database operations")
     
     def set_thread_count(self, count: int) -> None:
@@ -1037,7 +1034,7 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的设置方法
+        
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_thread_count'):
             try:
                 self._rust_instance.set_thread_count(count)
@@ -1046,7 +1043,7 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            # 模拟实现
+        
             self.thread_count = count
             print(f"Thread count set to {count} (simulated)")
     
@@ -1063,7 +1060,7 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的设置方法
+    
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'enable_query_logging'):
             try:
                 self._rust_instance.enable_query_logging(enable)
@@ -1073,7 +1070,7 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-            # 模拟实现
+        
             self.enable_logging = enable
             status = "enabled" if enable else "disabled"
             print(f"Query logging {status} (simulated)")
@@ -1091,7 +1088,7 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # 如果有Rust绑定，调用实际的获取方法
+        
         if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'get_performance_stats'):
             try:
                 stats = self._rust_instance.get_performance_stats()
@@ -1099,7 +1096,6 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-            # 模拟实现
             stats = {
                 "cache_hits": 0,
                 "cache_misses": 0,
@@ -1136,7 +1132,7 @@ class MiniGU:
             except Exception as e:
                 raise DataError(f"Data insertion failed: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+    
             raise RuntimeError("Rust bindings required for database operations")
     
     def _format_insert_data(self, data: List[Dict]) -> str:
@@ -1321,20 +1317,17 @@ async def async_connect(db_path: Optional[str] = None,
     connection = AsyncMiniGU(db_path, thread_count, cache_size, enable_logging)
     return connection
 
-
-# 使用示例
 if __name__ == "__main__":
-    # 示例1: 使用上下文管理器连接数据库
+
     with connect() as db:
-        # 执行图查询
+
         result = db.execute("MATCH (n) RETURN n;")
         print(result)
         print("As dictionary list:", result.to_list())
         
-        # 查看查询指标
         print("Query metrics:", result.metrics)
         
-        # 加载数据
+
         sample_data = [
             {"name": "Alice", "age": 30, "label": "Person"},
             {"name": "Bob", "age": 25, "label": "Person"},
@@ -1342,31 +1335,29 @@ if __name__ == "__main__":
         ]
         db.load(sample_data)
         
-        # 保存数据库
         db.save("example.mgu")
     
-    # 示例2: 直接创建连接
+
     db = connect("example.db")
     try:
         result = db.execute("MATCH (n:Person) RETURN n.name, n.age;")
         print(result.to_list())
         
-        # 创建图
         db.create_graph("social_network", {
             "Person": {"name": "STRING", "age": "INTEGER"},
             "Company": {"name": "STRING", "founded": "INTEGER"}
         })
         
-        # 插入数据
+        
         db.insert([
             {"name": "Charlie", "age": 35, "label": "Person"},
             {"name": "InnovateCo", "founded": 2015, "label": "Company"}
         ])
         
-        # 使用GQL INSERT语句
+        
         db.insert("VERTEX Person {name: 'David', age: 28}")
         
-        # 保存数据库
+    
         db.save("social_network.mgu")
     finally:
         db.close()
