@@ -1,0 +1,5 @@
+CALL create_test_graph('test_graph')
+INSERT (n:Person {name:'Alice', age:30})
+INSERT (n:Person {name:'Bob', age:25})
+INSERT (n:Company {name:'TechCorp', founded:2010})
+CALL export('test_graph', 'export_cli_test_with_data', 'manifest.json')

@@ -135,8 +135,8 @@ impl PyMiniGU {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
-        // Execute the import procedure
-        let query = format!("CALL import('default_graph', '{}', 'manifest.json');", path);
+        // Execute the import procedure with correct syntax (no semicolon)
+        let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
         match session.query(&query) {
             Ok(_) => {
                 println!("Data loaded successfully from: {}", path);
@@ -179,16 +179,30 @@ impl PyMiniGU {
                                 label = value_str;
                             } else {
                                 // Format property value appropriately
-                                // For simplicity, we'll treat all values as strings for now
-                                properties.push(format!("{}: '{}'", key_str, value_str));
+                                // Based on GQL examples, we need to handle different types correctly
+                                // For now, we'll try to determine if it's a number or string
+                                if let Ok(int_val) = value_str.parse::<i64>() {
+                                    properties.push(format!("{}: {}", key_str, int_val));
+                                } else if let Ok(float_val) = value_str.parse::<f64>() {
+                                    properties.push(format!("{}: {}", key_str, float_val));
+                                } else {
+                                    // It's a string, remove the extra quotes if they exist
+                                    let clean_value = if value_str.starts_with('\'') && value_str.ends_with('\'') && value_str.len() > 1 {
+                                        &value_str[1..value_str.len()-1]
+                                    } else {
+                                        &value_str
+                                    };
+                                    properties.push(format!("{}: '{}'", key_str, clean_value));
+                                }
                             }
                         }
                     }
 
-                    // Create INSERT statement
+                    // Create INSERT statement using correct GQL syntax
                     if !properties.is_empty() {
                         let props_str = properties.join(", ");
-                        let statement = format!("INSERT VERTEX {} {{{}}};", label, props_str);
+                        // Use (:Label { properties }) syntax according to GQL specification
+                        let statement = format!("INSERT (:{} {{ {} }})", label, props_str);
                         insert_statements.push(statement);
                     }
                 }
@@ -226,8 +240,8 @@ impl PyMiniGU {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
-        // Execute the export procedure
-        let query = format!("CALL export('default_graph', '{}', 'manifest.json');", path);
+        // Execute the export procedure with correct syntax (no semicolon)
+        let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
         match session.query(&query) {
             Ok(_) => {
                 println!("Database saved successfully to: {}", path);

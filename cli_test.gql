@@ -1,0 +1,2 @@
+CALL create_test_graph('test_graph')
+CALL export('test_graph', 'export_cli_test', 'manifest.json')
