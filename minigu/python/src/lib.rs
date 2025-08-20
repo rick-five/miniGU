@@ -179,16 +179,20 @@ impl PyMiniGU {
                                 label = value_str;
                             } else {
                                 // Format property value appropriately
-                                // Based on GQL examples, we need to handle different types correctly
-                                // For now, we'll try to determine if it's a number or string
+                                // Based on GQL examples, we need to handle different types
+                                // correctly For now, we'll try to
+                                // determine if it's a number or string
                                 if let Ok(int_val) = value_str.parse::<i64>() {
                                     properties.push(format!("{}: {}", key_str, int_val));
                                 } else if let Ok(float_val) = value_str.parse::<f64>() {
                                     properties.push(format!("{}: {}", key_str, float_val));
                                 } else {
                                     // It's a string, remove the extra quotes if they exist
-                                    let clean_value = if value_str.starts_with('\'') && value_str.ends_with('\'') && value_str.len() > 1 {
-                                        &value_str[1..value_str.len()-1]
+                                    let clean_value = if value_str.starts_with('\'')
+                                        && value_str.ends_with('\'')
+                                        && value_str.len() > 1
+                                    {
+                                        &value_str[1..value_str.len() - 1]
                                     } else {
                                         &value_str
                                     };
@@ -477,3 +481,4 @@ fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMiniGU>()?;
     Ok(())
 }
+
