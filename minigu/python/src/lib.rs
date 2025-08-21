@@ -197,7 +197,7 @@ impl PyMiniGU {
         for statement in insert_statements {
             session
                 .query(&statement)
-                .expect(&format!("Failed to execute statement '{}'", statement));
+                .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
             println!("Successfully executed: {}", statement);
         }
 
@@ -231,7 +231,7 @@ impl PyMiniGU {
         let query = format!("CALL create_test_graph('{}');", name);
         session
             .query(&query)
-            .expect(&format!("Failed to create graph '{}'", name));
+            .unwrap_or_else(|_| panic!("Failed to create graph '{}'", name));
 
         println!("Graph '{}' created successfully", name);
 
