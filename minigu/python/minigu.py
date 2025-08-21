@@ -24,7 +24,7 @@ except (ImportError, ModuleNotFoundError):
         HAS_RUST_BINDINGS = True
     except (ImportError, ModuleNotFoundError):
         HAS_RUST_BINDINGS = False
-        # 不再提供模拟实现的警告，直接抛出异常
+        # No longer provide simulated implementation warning, directly raise exception
         raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
         print("Warning: Rust bindings not available. Using simulated implementation.")
 
@@ -245,7 +245,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+            # Remove simulated implementation, only keep real functionality
             raise RuntimeError("Rust bindings required for database operations")
     
     async def load(self, data: Union[List[Dict], str, Path]) -> None:
@@ -355,7 +355,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Database save failed: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+            # Remove simulated implementation, only keep real functionality
             raise RuntimeError("Rust bindings required for database operations")
     
     async def create_graph(self, graph_name: str, schema: Optional[Dict] = None) -> None:
@@ -388,7 +388,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
-            # 移除模拟实现，只保留真实功能
+            # Remove simulated implementation, only keep real functionality
             raise RuntimeError("Rust bindings required for database operations")
     
     def _format_schema(self, schema: Dict) -> str:
