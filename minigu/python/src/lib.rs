@@ -23,6 +23,7 @@ pub struct PyMiniGU {
     #[allow(dead_code)]
     db_path: Option<String>,
 }
+ 
 
 #[pymethods]
 impl PyMiniGU {
