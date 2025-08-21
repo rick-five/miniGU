@@ -40,16 +40,18 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
-        let db = Database::open_in_memory(&config)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        let db = Database::open_in_memory(&config).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to initialize database: {}",
                 e
-            )))?;
-        let session = db.session()
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+            ))
+        })?;
+        let session = db.session().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to create session: {}",
                 e
-            )))?;
+            ))
+        })?;
         self.database = Some(db);
         self.session = Some(session);
         Ok(())
@@ -64,11 +66,9 @@ impl PyMiniGU {
         })?;
 
         // Execute the query
-        let query_result = session.query(query)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Query execution failed: {}",
-                e
-            )))?;
+        let query_result = session.query(query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Query execution failed: {}", e))
+        })?;
 
         // Convert QueryResult to Python dict
         let dict = PyDict::new(py);
@@ -105,8 +105,7 @@ impl PyMiniGU {
         // Convert metrics
         let metrics = query_result.metrics();
         let metrics_dict = PyDict::new(py);
-        metrics_dict
-            .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
+        metrics_dict.set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
         metrics_dict.set_item(
             "planning_time_ms",
             metrics.planning_time().as_millis() as f64,
@@ -131,11 +130,12 @@ impl PyMiniGU {
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
-        session.query(&query)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to load data from file: {}",
                 e
-            )))?;
+            ))
+        })?;
 
         println!("Data loaded successfully from: {}", path);
         Ok(())
@@ -150,37 +150,41 @@ impl PyMiniGU {
         })?;
 
         // Convert Python data to Rust data structures
-        let list = data.downcast::<PyList>()
-            .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Expected a list of dictionaries",
-            ))?;
-            
+        let list = data.downcast::<PyList>().map_err(|_| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries")
+        })?;
+
         println!("Loading {} records", list.len());
 
         // Build GQL INSERT statements from the Python data
         let mut insert_statements = Vec::new();
 
         for item in list.iter() {
-            let dict = item.downcast::<PyDict>()
-                .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Expected a list of dictionaries",
-                ))?;
-                
+            let dict = item.downcast::<PyDict>().map_err(|_| {
+                PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries")
+            })?;
+
             // Extract label and properties
             let mut label = "Node".to_string();
             let mut properties = Vec::new();
 
             for (key, value) in dict.iter() {
-                let key_str = key.downcast::<PyString>()
-                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
-                        "Dictionary keys must be strings",
-                    ))?
+                let key_str = key
+                    .downcast::<PyString>()
+                    .map_err(|_| {
+                        PyErr::new::<pyo3::exceptions::PyException, _>(
+                            "Dictionary keys must be strings",
+                        )
+                    })?
                     .to_string();
-                    
-                let value_str = value.str()
-                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
-                        "Dictionary values must be convertible to strings",
-                    ))?
+
+                let value_str = value
+                    .str()
+                    .map_err(|_| {
+                        PyErr::new::<pyo3::exceptions::PyException, _>(
+                            "Dictionary values must be convertible to strings",
+                        )
+                    })?
                     .to_string();
 
                 if key_str == "label" {
@@ -220,11 +224,12 @@ impl PyMiniGU {
 
         // Execute all INSERT statements
         for statement in insert_statements {
-            session.query(&statement)
-                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+            session.query(&statement).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                     "Failed to execute statement '{}': {}",
                     statement, e
-                )))?;
+                ))
+            })?;
             println!("Successfully executed: {}", statement);
         }
 
@@ -242,11 +247,12 @@ impl PyMiniGU {
 
         // Execute the export procedure with correct syntax (no semicolon)
         let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
-        session.query(&query)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to save database to file: {}",
                 e
-            )))?;
+            ))
+        })?;
 
         println!("Database saved successfully to: {}", path);
         Ok(())
@@ -262,11 +268,12 @@ impl PyMiniGU {
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}');", name);
-        session.query(&query)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to create graph '{}': {}",
                 name, e
-            )))?;
+            ))
+        })?;
 
         println!("Graph '{}' created successfully", name);
 
@@ -288,11 +295,9 @@ impl PyMiniGU {
         })?;
 
         // Execute the INSERT statement
-        session.query(data)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to insert data: {}",
-                e
-            )))?;
+        session.query(data).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to insert data: {}", e))
+        })?;
 
         println!("Data inserted successfully: {}", data);
         Ok(())
@@ -307,11 +312,9 @@ impl PyMiniGU {
         })?;
 
         // Execute the UPDATE statement
-        session.query(query)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to update data: {}",
-                e
-            )))?;
+        session.query(query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to update data: {}", e))
+        })?;
 
         println!("Data updated successfully with query: {}", query);
         Ok(())
@@ -326,11 +329,9 @@ impl PyMiniGU {
         })?;
 
         // Execute the DELETE statement
-        session.query(query)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to delete data: {}",
-                e
-            )))?;
+        session.query(query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to delete data: {}", e))
+        })?;
 
         println!("Data deleted successfully with query: {}", query);
         Ok(())
