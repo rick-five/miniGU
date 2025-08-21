@@ -91,8 +91,7 @@ impl PyMiniGU {
         // Convert metrics
         let metrics = query_result.metrics();
         let metrics_dict = PyDict::new(py);
-        metrics_dict
-            .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
+        metrics_dict.set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
         metrics_dict.set_item(
             "planning_time_ms",
             metrics.planning_time().as_millis() as f64,
@@ -115,7 +114,9 @@ impl PyMiniGU {
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
-        session.query(&query).expect("Failed to load data from file");
+        session
+            .query(&query)
+            .expect("Failed to load data from file");
 
         println!("Data loaded successfully from: {}", path);
         Ok(())
@@ -128,24 +129,34 @@ impl PyMiniGU {
         let session = self.session.as_mut().expect("Session not initialized");
 
         // Convert Python data to Rust data structures
-        let list = data.downcast::<PyList>().expect("Expected a list of dictionaries");
-            
+        let list = data
+            .downcast::<PyList>()
+            .expect("Expected a list of dictionaries");
+
         println!("Loading {} records", list.len());
 
         // Build GQL INSERT statements from the Python data
         let mut insert_statements = Vec::new();
 
         for item in list.iter() {
-            let dict = item.downcast::<PyDict>().expect("Expected a list of dictionaries");
-                
+            let dict = item
+                .downcast::<PyDict>()
+                .expect("Expected a list of dictionaries");
+
             // Extract label and properties
             let mut label = "Node".to_string();
             let mut properties = Vec::new();
 
             for (key, value) in dict.iter() {
-                let key_str = key.downcast::<PyString>().expect("Dictionary keys must be strings").to_string();
-                    
-                let value_str = value.str().expect("Dictionary values must be convertible to strings").to_string();
+                let key_str = key
+                    .downcast::<PyString>()
+                    .expect("Dictionary keys must be strings")
+                    .to_string();
+
+                let value_str = value
+                    .str()
+                    .expect("Dictionary values must be convertible to strings")
+                    .to_string();
 
                 if key_str == "label" {
                     label = value_str;
@@ -184,7 +195,9 @@ impl PyMiniGU {
 
         // Execute all INSERT statements
         for statement in insert_statements {
-            session.query(&statement).expect(&format!("Failed to execute statement '{}'", statement));
+            session
+                .query(&statement)
+                .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
             println!("Successfully executed: {}", statement);
         }
 
@@ -200,7 +213,9 @@ impl PyMiniGU {
 
         // Execute the export procedure with correct syntax (no semicolon)
         let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
-        session.query(&query).expect("Failed to save database to file");
+        session
+            .query(&query)
+            .expect("Failed to save database to file");
 
         println!("Database saved successfully to: {}", path);
         Ok(())
@@ -214,7 +229,9 @@ impl PyMiniGU {
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}');", name);
-        session.query(&query).expect(&format!("Failed to create graph '{}'", name));
+        session
+            .query(&query)
+            .unwrap_or_else(|_| panic!("Failed to create graph '{}'", name));
 
         println!("Graph '{}' created successfully", name);
 
