@@ -132,7 +132,7 @@ impl PyMiniGU {
         let list = data
             .downcast::<PyList>()
             .expect("Expected a list of dictionaries");
-            
+
         println!("Loading {} records", list.len());
 
         // Build GQL INSERT statements from the Python data
@@ -142,7 +142,7 @@ impl PyMiniGU {
             let dict = item
                 .downcast::<PyDict>()
                 .expect("Expected a list of dictionaries");
-                
+
             // Extract label and properties
             let mut label = "Node".to_string();
             let mut properties = Vec::new();
