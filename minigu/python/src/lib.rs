@@ -17,6 +17,25 @@ use pyo3::types::{PyDict, PyList, PyModule, PyString};
 #[allow(non_local_definitions)]
 #[pyclass]
 #[allow(clippy::upper_case_acronyms)]
+pub struct PyMiniGU {//! Python bindings for miniGU graph database
+//!
+//! This module provides Python bindings for the miniGU graph database using PyO3.
+
+use arrow::array::*;
+use arrow::datatypes::DataType;
+use minigu::database::{Database, DatabaseConfig};
+use minigu::session::Session;
+use minigu_common::data_chunk::DataChunk;
+use pyo3::prelude::*;
+// Enable auto-initialize on macOS
+#[cfg(feature = "auto-initialize")]
+use pyo3::prepare_freethreaded_python;
+use pyo3::types::{PyDict, PyList, PyModule, PyString};
+
+/// PyMiniGu class that wraps the Rust Database
+#[allow(non_local_definitions)]
+#[pyclass]
+#[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
@@ -40,23 +59,19 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
-        match Database::open_in_memory(&config) {
-            Ok(db) => match db.session() {
-                Ok(session) => {
-                    self.database = Some(db);
-                    self.session = Some(session);
-                    Ok(())
-                }
-                Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to create session: {}",
-                    e
-                ))),
-            },
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        let db = Database::open_in_memory(&config)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to initialize database: {}",
                 e
-            ))),
-        }
+            )))?;
+        let session = db.session()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to create session: {}",
+                e
+            )))?;
+        self.database = Some(db);
+        self.session = Some(session);
+        Ok(())
     }
 
     /// Execute a GQL query
@@ -68,63 +83,61 @@ impl PyMiniGU {
         })?;
 
         // Execute the query
-        match session.query(query) {
-            Ok(query_result) => {
-                // Convert QueryResult to Python dict
-                let dict = PyDict::new(py);
-
-                // Convert schema
-                let schema_list = PyList::empty(py);
-                if let Some(schema_ref) = query_result.schema() {
-                    for field in schema_ref.fields() {
-                        let field_dict = PyDict::new(py);
-                        field_dict.set_item("name", field.name())?;
-                        field_dict.set_item("data_type", format!("{:?}", field.ty()))?;
-                        schema_list.append(field_dict)?;
-                    }
-                }
-
-                dict.set_item("schema", schema_list)?;
-
-                // Convert data
-                let data_list = PyList::empty(py);
-                for chunk in query_result.iter() {
-                    // Convert DataChunk to Python list of lists
-                    let chunk_data = convert_data_chunk(chunk)?;
-                    for row in chunk_data {
-                        let row_list = PyList::empty(py);
-                        for value in row {
-                            row_list.append(value)?;
-                        }
-                        data_list.append(row_list)?;
-                    }
-                }
-
-                dict.set_item("data", data_list)?;
-
-                // Convert metrics
-                let metrics = query_result.metrics();
-                let metrics_dict = PyDict::new(py);
-                metrics_dict
-                    .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
-                metrics_dict.set_item(
-                    "planning_time_ms",
-                    metrics.planning_time().as_millis() as f64,
-                )?;
-                metrics_dict.set_item(
-                    "execution_time_ms",
-                    metrics.execution_time().as_millis() as f64,
-                )?;
-
-                dict.set_item("metrics", metrics_dict)?;
-
-                Ok(dict.into())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        let query_result = session.query(query)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Query execution failed: {}",
                 e
-            ))),
+            )))?;
+
+        // Convert QueryResult to Python dict
+        let dict = PyDict::new(py);
+
+        // Convert schema
+        let schema_list = PyList::empty(py);
+        if let Some(schema_ref) = query_result.schema() {
+            for field in schema_ref.fields() {
+                let field_dict = PyDict::new(py);
+                field_dict.set_item("name", field.name())?;
+                field_dict.set_item("data_type", format!("{:?}", field.ty()))?;
+                schema_list.append(field_dict)?;
+            }
         }
+
+        dict.set_item("schema", schema_list)?;
+
+        // Convert data
+        let data_list = PyList::empty(py);
+        for chunk in query_result.iter() {
+            // Convert DataChunk to Python list of lists
+            let chunk_data = convert_data_chunk(chunk)?;
+            for row in chunk_data {
+                let row_list = PyList::empty(py);
+                for value in row {
+                    row_list.append(value)?;
+                }
+                data_list.append(row_list)?;
+            }
+        }
+
+        dict.set_item("data", data_list)?;
+
+        // Convert metrics
+        let metrics = query_result.metrics();
+        let metrics_dict = PyDict::new(py);
+        metrics_dict
+            .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
+        metrics_dict.set_item(
+            "planning_time_ms",
+            metrics.planning_time().as_millis() as f64,
+        )?;
+        metrics_dict.set_item(
+            "execution_time_ms",
+            metrics.execution_time().as_millis() as f64,
+        )?;
+
+        dict.set_item("metrics", metrics_dict)?;
+
+        Ok(dict.into())
     }
 
     /// Load data from a file
@@ -137,16 +150,14 @@ impl PyMiniGU {
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
-        match session.query(&query) {
-            Ok(_) => {
-                println!("Data loaded successfully from: {}", path);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(&query)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to load data from file: {}",
                 e
-            ))),
-        }
+            )))?;
+
+        println!("Data loaded successfully from: {}", path);
+        Ok(())
     }
 
     /// Load data directly
@@ -158,82 +169,86 @@ impl PyMiniGU {
         })?;
 
         // Convert Python data to Rust data structures
-        if let Ok(list) = data.downcast::<PyList>() {
-            println!("Loading {} records", list.len());
-
-            // Build GQL INSERT statements from the Python data
-            let mut insert_statements = Vec::new();
-
-            for item in list.iter() {
-                if let Ok(dict) = item.downcast::<PyDict>() {
-                    // Extract label and properties
-                    let mut label = "Node".to_string();
-                    let mut properties = Vec::new();
-
-                    for (key, value) in dict.iter() {
-                        if let (Ok(key_str), Ok(value_str)) = (
-                            key.downcast::<PyString>().map(|s| s.to_string()),
-                            value.str().map(|s| s.to_string()),
-                        ) {
-                            if key_str == "label" {
-                                label = value_str;
-                            } else {
-                                // Format property value appropriately
-                                // Based on GQL examples, we need to handle different types
-                                // correctly. For now, we'll try to determine if it's a number
-                                // or string
-                                if let Ok(int_val) = value_str.parse::<i64>() {
-                                    properties.push(format!("{}: {}", key_str, int_val));
-                                } else if let Ok(float_val) = value_str.parse::<f64>() {
-                                    properties.push(format!("{}: {}", key_str, float_val));
-                                } else {
-                                    // It's a string, remove the extra quotes if they exist
-                                    let clean_value = if value_str.starts_with('\'')
-                                        && value_str.ends_with('\'')
-                                        && value_str.len() > 1
-                                    {
-                                        &value_str[1..value_str.len() - 1]
-                                    } else {
-                                        &value_str
-                                    };
-                                    properties.push(format!("{}: '{}'", key_str, clean_value));
-                                }
-                            }
-                        }
-                    }
-
-                    // Create INSERT statement using correct GQL syntax
-                    if !properties.is_empty() {
-                        let props_str = properties.join(", ");
-                        // Use (:Label { properties }) syntax according to GQL specification
-                        let statement = format!("INSERT (:{} {{ {} }})", label, props_str);
-                        insert_statements.push(statement);
-                    }
-                }
-            }
-
-            // Execute all INSERT statements
-            for statement in insert_statements {
-                match session.query(&statement) {
-                    Ok(_) => {
-                        println!("Successfully executed: {}", statement);
-                    }
-                    Err(e) => {
-                        return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                            "Failed to execute statement '{}': {}",
-                            statement, e
-                        )));
-                    }
-                }
-            }
-
-            println!("All data loaded successfully");
-            Ok(())
-        } else {
-            Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+        let list = data.downcast::<PyList>()
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
                 "Expected a list of dictionaries",
-            ))
+            ))?;
+            
+        println!("Loading {} records", list.len());
+
+        // Build GQL INSERT statements from the Python data
+        let mut insert_statements = Vec::new();
+
+        for item in list.iter() {
+            let dict = item.downcast::<PyDict>()
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                    "Expected a list of dictionaries",
+                ))?;
+                
+            // Extract label and properties
+            let mut label = "Node".to_string();
+            let mut properties = Vec::new();
+
+            for (key, value) in dict.iter() {
+                let key_str = key.downcast::<PyString>()
+                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                        "Dictionary keys must be strings",
+                    ))?
+                    .to_string();
+                    
+                let value_str = value.str()
+                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                        "Dictionary values must be convertible to strings",
+                    ))?
+                    .to_string();
+
+                if key_str == "label" {
+                    label = value_str;
+                } else {
+                    // Format property value appropriately
+                    // Based on GQL examples, we need to handle different types
+                    // correctly. For now, we'll try to determine if it's a number
+                    // or string
+                    if let Ok(int_val) = value_str.parse::<i64>() {
+                        properties.push(format!("{}: {}", key_str, int_val));
+                    } else if let Ok(float_val) = value_str.parse::<f64>() {
+                        properties.push(format!("{}: {}", key_str, float_val));
+                    } else {
+                        // It's a string, remove the extra quotes if they exist
+                        let clean_value = if value_str.starts_with('\'')
+                            && value_str.ends_with('\'')
+                            && value_str.len() > 1
+                        {
+                            &value_str[1..value_str.len() - 1]
+                        } else {
+                            &value_str
+                        };
+                        properties.push(format!("{}: '{}'", key_str, clean_value));
+                    }
+                }
+            }
+
+            // Create INSERT statement using correct GQL syntax
+            if !properties.is_empty() {
+                let props_str = properties.join(", ");
+                // Use (:Label { properties }) syntax according to GQL specification
+                let statement = format!("INSERT (:{} {{ {} }})", label, props_str);
+                insert_statements.push(statement);
+            }
         }
+
+        // Execute all INSERT statements
+        for statement in insert_statements {
+            session.query(&statement)
+                .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to execute statement '{}': {}",
+                    statement, e
+                )))?;
+            println!("Successfully executed: {}", statement);
+        }
+
+        println!("All data loaded successfully");
+        Ok(())
     }
 
     /// Save database to a file
@@ -246,16 +261,14 @@ impl PyMiniGU {
 
         // Execute the export procedure with correct syntax (no semicolon)
         let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
-        match session.query(&query) {
-            Ok(_) => {
-                println!("Database saved successfully to: {}", path);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(&query)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to save database to file: {}",
                 e
-            ))),
-        }
+            )))?;
+
+        println!("Database saved successfully to: {}", path);
+        Ok(())
     }
 
     /// Create a graph
@@ -268,23 +281,21 @@ impl PyMiniGU {
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}');", name);
-        match session.query(&query) {
-            Ok(_) => {
-                println!("Graph '{}' created successfully", name);
-
-                // If schema is provided, we could process it here
-                if let Some(schema_str) = schema {
-                    println!("Schema provided but not yet implemented: {}", schema_str);
-                    // In a full implementation, we would parse the schema and add vertex/edge types
-                }
-
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(&query)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to create graph '{}': {}",
                 name, e
-            ))),
+            )))?;
+
+        println!("Graph '{}' created successfully", name);
+
+        // If schema is provided, we could process it here
+        if let Some(schema_str) = schema {
+            println!("Schema provided but not yet implemented: {}", schema_str);
+            // In a full implementation, we would parse the schema and add vertex/edge types
         }
+
+        Ok(())
     }
 
     /// Insert data
@@ -296,16 +307,14 @@ impl PyMiniGU {
         })?;
 
         // Execute the INSERT statement
-        match session.query(data) {
-            Ok(_) => {
-                println!("Data inserted successfully: {}", data);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(data)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to insert data: {}",
                 e
-            ))),
-        }
+            )))?;
+
+        println!("Data inserted successfully: {}", data);
+        Ok(())
     }
 
     /// Update data
@@ -317,16 +326,14 @@ impl PyMiniGU {
         })?;
 
         // Execute the UPDATE statement
-        match session.query(query) {
-            Ok(_) => {
-                println!("Data updated successfully with query: {}", query);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(query)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to update data: {}",
                 e
-            ))),
-        }
+            )))?;
+
+        println!("Data updated successfully with query: {}", query);
+        Ok(())
     }
 
     /// Delete data
@@ -338,16 +345,14 @@ impl PyMiniGU {
         })?;
 
         // Execute the DELETE statement
-        match session.query(query) {
-            Ok(_) => {
-                println!("Data deleted successfully with query: {}", query);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+        session.query(query)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to delete data: {}",
                 e
-            ))),
-        }
+            )))?;
+
+        println!("Data deleted successfully with query: {}", query);
+        Ok(())
     }
 
     /// Close the database connection
