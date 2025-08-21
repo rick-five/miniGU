@@ -17,25 +17,6 @@ use pyo3::types::{PyDict, PyList, PyModule, PyString};
 #[allow(non_local_definitions)]
 #[pyclass]
 #[allow(clippy::upper_case_acronyms)]
-pub struct PyMiniGU {//! Python bindings for miniGU graph database
-//!
-//! This module provides Python bindings for the miniGU graph database using PyO3.
-
-use arrow::array::*;
-use arrow::datatypes::DataType;
-use minigu::database::{Database, DatabaseConfig};
-use minigu::session::Session;
-use minigu_common::data_chunk::DataChunk;
-use pyo3::prelude::*;
-// Enable auto-initialize on macOS
-#[cfg(feature = "auto-initialize")]
-use pyo3::prepare_freethreaded_python;
-use pyo3::types::{PyDict, PyList, PyModule, PyString};
-
-/// PyMiniGu class that wraps the Rust Database
-#[allow(non_local_definitions)]
-#[pyclass]
-#[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
