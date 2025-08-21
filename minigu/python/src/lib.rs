@@ -40,314 +40,247 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
-        match Database::open_in_memory(&config) {
-            Ok(db) => match db.session() {
-                Ok(session) => {
-                    self.database = Some(db);
-                    self.session = Some(session);
-                    Ok(())
-                }
-                Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to create session: {}",
-                    e
-                ))),
-            },
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to initialize database: {}",
-                e
-            ))),
-        }
+        let db = Database::open_in_memory(&config).expect("Failed to initialize database");
+        let session = db.session().expect("Failed to create session");
+        self.database = Some(db);
+        self.session = Some(session);
+        Ok(())
     }
 
     /// Execute a GQL query
     #[allow(unsafe_op_in_unsafe_fn)]
     fn execute(&mut self, query: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the query
-        match session.query(query) {
-            Ok(query_result) => {
-                // Convert QueryResult to Python dict
-                let dict = PyDict::new(py);
+        let query_result = session.query(query).expect("Query execution failed");
 
-                // Convert schema
-                let schema_list = PyList::empty(py);
-                if let Some(schema_ref) = query_result.schema() {
-                    for field in schema_ref.fields() {
-                        let field_dict = PyDict::new(py);
-                        field_dict.set_item("name", field.name())?;
-                        field_dict.set_item("data_type", format!("{:?}", field.ty()))?;
-                        schema_list.append(field_dict)?;
-                    }
-                }
+        // Convert QueryResult to Python dict
+        let dict = PyDict::new(py);
 
-                dict.set_item("schema", schema_list)?;
-
-                // Convert data
-                let data_list = PyList::empty(py);
-                for chunk in query_result.iter() {
-                    // Convert DataChunk to Python list of lists
-                    let chunk_data = convert_data_chunk(chunk)?;
-                    for row in chunk_data {
-                        let row_list = PyList::empty(py);
-                        for value in row {
-                            row_list.append(value)?;
-                        }
-                        data_list.append(row_list)?;
-                    }
-                }
-
-                dict.set_item("data", data_list)?;
-
-                // Convert metrics
-                let metrics = query_result.metrics();
-                let metrics_dict = PyDict::new(py);
-                metrics_dict
-                    .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
-                metrics_dict.set_item(
-                    "planning_time_ms",
-                    metrics.planning_time().as_millis() as f64,
-                )?;
-                metrics_dict.set_item(
-                    "execution_time_ms",
-                    metrics.execution_time().as_millis() as f64,
-                )?;
-
-                dict.set_item("metrics", metrics_dict)?;
-
-                Ok(dict.into())
+        // Convert schema
+        let schema_list = PyList::empty(py);
+        if let Some(schema_ref) = query_result.schema() {
+            for field in schema_ref.fields() {
+                let field_dict = PyDict::new(py);
+                field_dict.set_item("name", field.name())?;
+                field_dict.set_item("data_type", format!("{:?}", field.ty()))?;
+                schema_list.append(field_dict)?;
             }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Query execution failed: {}",
-                e
-            ))),
         }
+
+        dict.set_item("schema", schema_list)?;
+
+        // Convert data
+        let data_list = PyList::empty(py);
+        for chunk in query_result.iter() {
+            // Convert DataChunk to Python list of lists
+            let chunk_data = convert_data_chunk(chunk)?;
+            for row in chunk_data {
+                let row_list = PyList::empty(py);
+                for value in row {
+                    row_list.append(value)?;
+                }
+                data_list.append(row_list)?;
+            }
+        }
+
+        dict.set_item("data", data_list)?;
+
+        // Convert metrics
+        let metrics = query_result.metrics();
+        let metrics_dict = PyDict::new(py);
+        metrics_dict.set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
+        metrics_dict.set_item(
+            "planning_time_ms",
+            metrics.planning_time().as_millis() as f64,
+        )?;
+        metrics_dict.set_item(
+            "execution_time_ms",
+            metrics.execution_time().as_millis() as f64,
+        )?;
+
+        dict.set_item("metrics", metrics_dict)?;
+
+        Ok(dict.into())
     }
 
     /// Load data from a file
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_from_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
-        match session.query(&query) {
-            Ok(_) => {
-                println!("Data loaded successfully from: {}", path);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to load data from file: {}",
-                e
-            ))),
-        }
+        session
+            .query(&query)
+            .expect("Failed to load data from file");
+
+        println!("Data loaded successfully from: {}", path);
+        Ok(())
     }
 
     /// Load data directly
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Convert Python data to Rust data structures
-        if let Ok(list) = data.downcast::<PyList>() {
-            println!("Loading {} records", list.len());
+        let list = data
+            .downcast::<PyList>()
+            .expect("Expected a list of dictionaries");
 
-            // Build GQL INSERT statements from the Python data
-            let mut insert_statements = Vec::new();
+        println!("Loading {} records", list.len());
 
-            for item in list.iter() {
-                if let Ok(dict) = item.downcast::<PyDict>() {
-                    // Extract label and properties
-                    let mut label = "Node".to_string();
-                    let mut properties = Vec::new();
+        // Build GQL INSERT statements from the Python data
+        let mut insert_statements = Vec::new();
 
-                    for (key, value) in dict.iter() {
-                        if let (Ok(key_str), Ok(value_str)) = (
-                            key.downcast::<PyString>().map(|s| s.to_string()),
-                            value.str().map(|s| s.to_string()),
-                        ) {
-                            if key_str == "label" {
-                                label = value_str;
-                            } else {
-                                // Format property value appropriately
-                                // Based on GQL examples, we need to handle different types
-                                // correctly. For now, we'll try to determine if it's a number
-                                // or string
-                                if let Ok(int_val) = value_str.parse::<i64>() {
-                                    properties.push(format!("{}: {}", key_str, int_val));
-                                } else if let Ok(float_val) = value_str.parse::<f64>() {
-                                    properties.push(format!("{}: {}", key_str, float_val));
-                                } else {
-                                    // It's a string, remove the extra quotes if they exist
-                                    let clean_value = if value_str.starts_with('\'')
-                                        && value_str.ends_with('\'')
-                                        && value_str.len() > 1
-                                    {
-                                        &value_str[1..value_str.len() - 1]
-                                    } else {
-                                        &value_str
-                                    };
-                                    properties.push(format!("{}: '{}'", key_str, clean_value));
-                                }
-                            }
-                        }
-                    }
+        for item in list.iter() {
+            let dict = item
+                .downcast::<PyDict>()
+                .expect("Expected a list of dictionaries");
 
-                    // Create INSERT statement using correct GQL syntax
-                    if !properties.is_empty() {
-                        let props_str = properties.join(", ");
-                        // Use (:Label { properties }) syntax according to GQL specification
-                        let statement = format!("INSERT (:{} {{ {} }})", label, props_str);
-                        insert_statements.push(statement);
-                    }
-                }
-            }
+            // Extract label and properties
+            let mut label = "Node".to_string();
+            let mut properties = Vec::new();
 
-            // Execute all INSERT statements
-            for statement in insert_statements {
-                match session.query(&statement) {
-                    Ok(_) => {
-                        println!("Successfully executed: {}", statement);
-                    }
-                    Err(e) => {
-                        return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                            "Failed to execute statement '{}': {}",
-                            statement, e
-                        )));
+            for (key, value) in dict.iter() {
+                let key_str = key
+                    .downcast::<PyString>()
+                    .expect("Dictionary keys must be strings")
+                    .to_string();
+
+                let value_str = value
+                    .str()
+                    .expect("Dictionary values must be convertible to strings")
+                    .to_string();
+
+                if key_str == "label" {
+                    label = value_str;
+                } else {
+                    // Format property value appropriately
+                    // Based on GQL examples, we need to handle different types
+                    // correctly. For now, we'll try to determine if it's a number
+                    // or string
+                    if let Ok(int_val) = value_str.parse::<i64>() {
+                        properties.push(format!("{}: {}", key_str, int_val));
+                    } else if let Ok(float_val) = value_str.parse::<f64>() {
+                        properties.push(format!("{}: {}", key_str, float_val));
+                    } else {
+                        // It's a string, remove the extra quotes if they exist
+                        let clean_value = if value_str.starts_with('\'')
+                            && value_str.ends_with('\'')
+                            && value_str.len() > 1
+                        {
+                            &value_str[1..value_str.len() - 1]
+                        } else {
+                            &value_str
+                        };
+                        properties.push(format!("{}: '{}'", key_str, clean_value));
                     }
                 }
             }
 
-            println!("All data loaded successfully");
-            Ok(())
-        } else {
-            Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Expected a list of dictionaries",
-            ))
+            // Create INSERT statement using correct GQL syntax
+            if !properties.is_empty() {
+                let props_str = properties.join(", ");
+                // Use (:Label { properties }) syntax according to GQL specification
+                let statement = format!("INSERT (:{} {{ {} }})", label, props_str);
+                insert_statements.push(statement);
+            }
         }
+
+        // Execute all INSERT statements
+        for statement in insert_statements {
+            session
+                .query(&statement)
+                .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
+            println!("Successfully executed: {}", statement);
+        }
+
+        println!("All data loaded successfully");
+        Ok(())
     }
 
     /// Save database to a file
     #[allow(unsafe_op_in_unsafe_fn)]
     fn save_to_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the export procedure with correct syntax (no semicolon)
         let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
-        match session.query(&query) {
-            Ok(_) => {
-                println!("Database saved successfully to: {}", path);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to save database to file: {}",
-                e
-            ))),
-        }
+        session
+            .query(&query)
+            .expect("Failed to save database to file");
+
+        println!("Database saved successfully to: {}", path);
+        Ok(())
     }
 
     /// Create a graph
     #[allow(unsafe_op_in_unsafe_fn)]
     fn create_graph(&mut self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}');", name);
-        match session.query(&query) {
-            Ok(_) => {
-                println!("Graph '{}' created successfully", name);
+        session
+            .query(&query)
+            .unwrap_or_else(|_| panic!("Failed to create graph '{}'", name));
 
-                // If schema is provided, we could process it here
-                if let Some(schema_str) = schema {
-                    println!("Schema provided but not yet implemented: {}", schema_str);
-                    // In a full implementation, we would parse the schema and add vertex/edge types
-                }
+        println!("Graph '{}' created successfully", name);
 
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to create graph '{}': {}",
-                name, e
-            ))),
+        // If schema is provided, we could process it here
+        if let Some(schema_str) = schema {
+            println!("Schema provided but not yet implemented: {}", schema_str);
+            // In a full implementation, we would parse the schema and add vertex/edge types
         }
+
+        Ok(())
     }
 
     /// Insert data
     #[allow(unsafe_op_in_unsafe_fn)]
     fn insert_data(&mut self, data: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the INSERT statement
-        match session.query(data) {
-            Ok(_) => {
-                println!("Data inserted successfully: {}", data);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to insert data: {}",
-                e
-            ))),
-        }
+        session.query(data).expect("Failed to insert data");
+
+        println!("Data inserted successfully: {}", data);
+        Ok(())
     }
 
     /// Update data
     #[allow(unsafe_op_in_unsafe_fn)]
     fn update_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the UPDATE statement
-        match session.query(query) {
-            Ok(_) => {
-                println!("Data updated successfully with query: {}", query);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to update data: {}",
-                e
-            ))),
-        }
+        session.query(query).expect("Failed to update data");
+
+        println!("Data updated successfully with query: {}", query);
+        Ok(())
     }
 
     /// Delete data
     #[allow(unsafe_op_in_unsafe_fn)]
     fn delete_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the DELETE statement
-        match session.query(query) {
-            Ok(_) => {
-                println!("Data deleted successfully with query: {}", query);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to delete data: {}",
-                e
-            ))),
-        }
+        session.query(query).expect("Failed to delete data");
+
+        println!("Data deleted successfully with query: {}", query);
+        Ok(())
     }
 
     /// Close the database connection
