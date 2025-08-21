@@ -40,18 +40,8 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
-        let db = Database::open_in_memory(&config).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to initialize database: {}",
-                e
-            ))
-        })?;
-        let session = db.session().map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to create session: {}",
-                e
-            ))
-        })?;
+        let db = Database::open_in_memory(&config).expect("Failed to initialize database");
+        let session = db.session().expect("Failed to create session");
         self.database = Some(db);
         self.session = Some(session);
         Ok(())
@@ -61,14 +51,10 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn execute(&mut self, query: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the query
-        let query_result = session.query(query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Query execution failed: {}", e))
-        })?;
+        let query_result = session.query(query).expect("Query execution failed");
 
         // Convert QueryResult to Python dict
         let dict = PyDict::new(py);
@@ -124,18 +110,13 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_from_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
-        session.query(&query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to load data from file: {}",
-                e
-            ))
-        })?;
+        session
+            .query(&query)
+            .expect("Failed to load data from file");
 
         println!("Data loaded successfully from: {}", path);
         Ok(())
@@ -145,14 +126,12 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Convert Python data to Rust data structures
-        let list = data.downcast::<PyList>().map_err(|_| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries")
-        })?;
+        let list = data
+            .downcast::<PyList>()
+            .expect("Expected a list of dictionaries");
 
         println!("Loading {} records", list.len());
 
@@ -160,9 +139,9 @@ impl PyMiniGU {
         let mut insert_statements = Vec::new();
 
         for item in list.iter() {
-            let dict = item.downcast::<PyDict>().map_err(|_| {
-                PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries")
-            })?;
+            let dict = item
+                .downcast::<PyDict>()
+                .expect("Expected a list of dictionaries");
 
             // Extract label and properties
             let mut label = "Node".to_string();
@@ -171,20 +150,12 @@ impl PyMiniGU {
             for (key, value) in dict.iter() {
                 let key_str = key
                     .downcast::<PyString>()
-                    .map_err(|_| {
-                        PyErr::new::<pyo3::exceptions::PyException, _>(
-                            "Dictionary keys must be strings",
-                        )
-                    })?
+                    .expect("Dictionary keys must be strings")
                     .to_string();
 
                 let value_str = value
                     .str()
-                    .map_err(|_| {
-                        PyErr::new::<pyo3::exceptions::PyException, _>(
-                            "Dictionary values must be convertible to strings",
-                        )
-                    })?
+                    .expect("Dictionary values must be convertible to strings")
                     .to_string();
 
                 if key_str == "label" {
@@ -224,12 +195,9 @@ impl PyMiniGU {
 
         // Execute all INSERT statements
         for statement in insert_statements {
-            session.query(&statement).map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to execute statement '{}': {}",
-                    statement, e
-                ))
-            })?;
+            session
+                .query(&statement)
+                .expect(&format!("Failed to execute statement '{}'", statement));
             println!("Successfully executed: {}", statement);
         }
 
@@ -241,18 +209,13 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn save_to_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the export procedure with correct syntax (no semicolon)
         let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
-        session.query(&query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to save database to file: {}",
-                e
-            ))
-        })?;
+        session
+            .query(&query)
+            .expect("Failed to save database to file");
 
         println!("Database saved successfully to: {}", path);
         Ok(())
@@ -262,18 +225,13 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn create_graph(&mut self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}');", name);
-        session.query(&query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to create graph '{}': {}",
-                name, e
-            ))
-        })?;
+        session
+            .query(&query)
+            .expect(&format!("Failed to create graph '{}'", name));
 
         println!("Graph '{}' created successfully", name);
 
@@ -290,14 +248,10 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn insert_data(&mut self, data: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the INSERT statement
-        session.query(data).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to insert data: {}", e))
-        })?;
+        session.query(data).expect("Failed to insert data");
 
         println!("Data inserted successfully: {}", data);
         Ok(())
@@ -307,14 +261,10 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn update_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the UPDATE statement
-        session.query(query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to update data: {}", e))
-        })?;
+        session.query(query).expect("Failed to update data");
 
         println!("Data updated successfully with query: {}", query);
         Ok(())
@@ -324,14 +274,10 @@ impl PyMiniGU {
     #[allow(unsafe_op_in_unsafe_fn)]
     fn delete_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the DELETE statement
-        session.query(query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to delete data: {}", e))
-        })?;
+        session.query(query).expect("Failed to delete data");
 
         println!("Data deleted successfully with query: {}", query);
         Ok(())
@@ -468,3 +414,4 @@ fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMiniGU>()?;
     Ok(())
 }
+
