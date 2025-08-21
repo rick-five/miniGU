@@ -414,3 +414,4 @@ fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMiniGU>()?;
     Ok(())
 }
+
