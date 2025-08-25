@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "minigu"
 version = "0.1.0"
 authors = [
-    {name = "miniGU Team"}
+    { name = "miniGU Team" }
 ]
 description = "A graph database for learning purposes"
 readme = "README.md"
