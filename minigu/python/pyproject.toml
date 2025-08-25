@@ -1,16 +1,9 @@
 [build-system]
-requires = ["setuptools>=40", "wheel", "setuptools-rust"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools>=40", "wheel", "setuptools-rust"]
 
 [project]
-name = "minigu"
-version = "0.1.0"
-authors = [
-    { name = "miniGU Team" }
-]
-description = "A graph database for learning purposes"
-readme = "README.md"
-requires-python = ">=3.6"
+authors = [{ name = "miniGU Team" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -23,14 +16,19 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Rust",
 ]
+description = "A graph database for learning purposes"
+name = "minigu"
+readme = "README.md"
+requires-python = ">=3.6"
+version = "0.1.0"
 
 [project.urls]
 Homepage = "https://github.com/TuGraph-family/miniGU"
 Repository = "https://github.com/TuGraph-family/miniGU"
 
 [tool.setuptools.packages.find]
-where = ["."]
 include = ["minigu*"]
+where = ["."]
 
 [tool.setuptools.package-data]
 minigu = ["*.pyd", "*.so", "*.dll"]
