@@ -8,29 +8,23 @@ use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
-// Enable auto-initialize on macOS
-#[cfg(feature = "auto-initialize")]
-use pyo3::prepare_freethreaded_python;
-use pyo3::types::{PyDict, PyList, PyModule, PyString};
+use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
 /// PyMiniGu class that wraps the Rust Database
 #[pyclass]
-#[allow(clippy::upper_case_acronyms)]
-pub struct PyMiniGU {
+pub struct PyMiniGu {
     database: Option<Database>,
     session: Option<Session>,
-    db_path: Option<String>,
 }
 
 #[pymethods]
-impl PyMiniGU {
+impl PyMiniGu {
     /// Create a new PyMiniGU instance
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGU {
+        Ok(PyMiniGu {
             database: None,
             session: None,
-            db_path: None,
         })
     }
 
@@ -305,53 +299,44 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
 /// Extract a value from an Arrow array at a specific index
 fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
-    Python::with_gil(|py| {
-        match array.data_type() {
-            DataType::Int32 => {
-                let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
-            }
-            DataType::Utf8 => {
-                let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
-            }
-            DataType::Boolean => {
-                let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
-            }
-            DataType::Float64 => {
-                let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
-            }
-            _ => {
-                Ok(format!("Unsupported type: {:?}", array.data_type())
-                    .into_pyobject(py)?
-                    .into_any()
-                    .unbind())
+    Python::with_gil(|py| match array.data_type() {
+        DataType::Int32 => {
+            let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
             }
         }
+        DataType::Utf8 => {
+            let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+            }
+        }
+        DataType::Boolean => {
+            let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                let value = pyo3::types::PyBool::new(py, arr.value(index));
+                Ok(value.into_pyobject(py).map(|v| {
+                    <pyo3::Bound<'_, PyBool> as Clone>::clone(&v)
+                        .into_any()
+                        .unbind()
+                })?)
+            }
+        }
+        DataType::Float64 => {
+            let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+            }
+        }
+        _ => Ok(py.None()),
     })
-}
-
-/// Python module definition
-#[pymodule]
-fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyMiniGU>()?;
-    Ok(())
 }
