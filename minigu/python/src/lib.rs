@@ -299,42 +299,44 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
 /// Extract a value from an Arrow array at a specific index
 fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
-    Python::with_gil(|py| {
-        match array.data_type() {
-            DataType::Int32 => {
-                let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
+    Python::with_gil(|py| match array.data_type() {
+        DataType::Int32 => {
+            let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
             }
-            DataType::Utf8 => {
-                let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
-            }
-            DataType::Boolean => {
-                let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    let value = pyo3::types::PyBool::new(py, arr.value(index));
-                    Ok(value.into_pyobject(py).map(|v| <pyo3::Bound<'_, PyBool> as Clone>::clone(&v).into_any().unbind())?)
-                }
-            }
-            DataType::Float64 => {
-                let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
-                if arr.is_null(index) {
-                    Ok(py.None())
-                } else {
-                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                }
-            }
-            _ => Ok(py.None()),
         }
+        DataType::Utf8 => {
+            let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+            }
+        }
+        DataType::Boolean => {
+            let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                let value = pyo3::types::PyBool::new(py, arr.value(index));
+                Ok(value.into_pyobject(py).map(|v| {
+                    <pyo3::Bound<'_, PyBool> as Clone>::clone(&v)
+                        .into_any()
+                        .unbind()
+                })?)
+            }
+        }
+        DataType::Float64 => {
+            let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
+            if arr.is_null(index) {
+                Ok(py.None())
+            } else {
+                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+            }
+        }
+        _ => Ok(py.None()),
     })
 }
