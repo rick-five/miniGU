@@ -14,13 +14,11 @@ use pyo3::prepare_freethreaded_python;
 use pyo3::types::{PyDict, PyList, PyModule, PyString};
 
 /// PyMiniGu class that wraps the Rust Database
-#[allow(non_local_definitions)]
 #[pyclass]
 #[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
-    #[allow(dead_code)]
     db_path: Option<String>,
 }
 
@@ -37,7 +35,6 @@ impl PyMiniGU {
     }
 
     /// Initialize the database
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
         let db = Database::open_in_memory(&config).expect("Failed to initialize database");
@@ -48,7 +45,6 @@ impl PyMiniGU {
     }
 
     /// Execute a GQL query
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn execute(&mut self, query: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -107,7 +103,6 @@ impl PyMiniGU {
     }
 
     /// Load data from a file
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn load_from_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -123,7 +118,6 @@ impl PyMiniGU {
     }
 
     /// Load data directly
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -206,7 +200,6 @@ impl PyMiniGU {
     }
 
     /// Save database to a file
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn save_to_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -222,7 +215,6 @@ impl PyMiniGU {
     }
 
     /// Create a graph
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn create_graph(&mut self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -245,7 +237,6 @@ impl PyMiniGU {
     }
 
     /// Insert data
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn insert_data(&mut self, data: &str) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -258,7 +249,6 @@ impl PyMiniGU {
     }
 
     /// Update data
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn update_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -271,7 +261,6 @@ impl PyMiniGU {
     }
 
     /// Delete data
-    #[allow(unsafe_op_in_unsafe_fn)]
     fn delete_data(&mut self, query: &str) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -323,18 +312,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    // Special handling for macOS to avoid linking issues
-                    #[cfg(target_os = "macos")]
-                    {
-                        #[allow(deprecated)]
-                        {
-                            Ok(arr.value(index).into_py(py))
-                        }
-                    }
-                    #[cfg(not(target_os = "macos"))]
-                    {
-                        Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                    }
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             DataType::Utf8 => {
@@ -342,18 +320,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    // Special handling for macOS to avoid linking issues
-                    #[cfg(target_os = "macos")]
-                    {
-                        #[allow(deprecated)]
-                        {
-                            Ok(arr.value(index).into_py(py))
-                        }
-                    }
-                    #[cfg(not(target_os = "macos"))]
-                    {
-                        Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                    }
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             DataType::Boolean => {
@@ -361,10 +328,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    #[allow(deprecated)]
-                    {
-                        Ok(arr.value(index).into_py(py))
-                    }
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             DataType::Float64 => {
@@ -372,37 +336,14 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 if arr.is_null(index) {
                     Ok(py.None())
                 } else {
-                    // Special handling for macOS to avoid linking issues
-                    #[cfg(target_os = "macos")]
-                    {
-                        #[allow(deprecated)]
-                        {
-                            Ok(arr.value(index).into_py(py))
-                        }
-                    }
-                    #[cfg(not(target_os = "macos"))]
-                    {
-                        Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-                    }
+                    Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
                 }
             }
             _ => {
-                // For unsupported types, convert to string representation
-                // Special handling for macOS to avoid linking issues
-                #[cfg(target_os = "macos")]
-                {
-                    #[allow(deprecated)]
-                    {
-                        Ok(format!("Unsupported type: {:?}", array.data_type()).into_py(py))
-                    }
-                }
-                #[cfg(not(target_os = "macos"))]
-                {
-                    Ok(format!("Unsupported type: {:?}", array.data_type())
-                        .into_pyobject(py)?
-                        .into_any()
-                        .unbind())
-                }
+                Ok(format!("Unsupported type: {:?}", array.data_type())
+                    .into_pyobject(py)?
+                    .into_any()
+                    .unbind())
             }
         }
     })
