@@ -449,6 +449,23 @@ class AsyncMiniGU:
                     self._stored_data.extend(data)
             print("Data inserted (simulated)")
     
+    def _format_schema(self, schema: Dict) -> str:
+        """
+        Format graph schema definition.
+        
+        Args:
+            schema: Graph schema definition
+            
+        Returns:
+            Formatted schema string
+        """
+        
+        elements = []
+        for label, properties in schema.items():
+            props = ", ".join([f"{name} {ptype}" for name, ptype in properties.items()])
+            elements.append(f"({label} :{label} {{{props}}})")
+        return "; ".join(elements)
+
     def _format_insert_data(self, data: List[Dict]) -> str:
         """
         Format data as GQL INSERT statement.
@@ -819,65 +836,18 @@ class MiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            
+            # When Rust bindings are not available, only support limited functionality
             print(f"Executing query: {query}")
-            
 
             query_lower = query.lower().strip()
             
-            if query_lower.startswith("match") or query_lower.startswith("select"):
-
-                schema = [
-                    {"name": "node_id", "type": "Integer"},
-                    {"name": "node_label", "type": "String"},
-                    {"name": "properties", "type": "Map"}
-                ]
-                
-                if self._stored_data:
-                    data = []
-                    for i, item in enumerate(self._stored_data):
-                        data.append([i+1, item.get("label", "Node"), item])
-                else:
-
-                    data = [
-                        [1, "Person", {"name": "Alice", "age": 30}],
-                        [2, "Person", {"name": "Bob", "age": 25}],
-                        [3, "Company", {"name": "TechCorp", "founded": 2010}]
-                    ]
-                    
-                metrics = {
-                    "parsing_time_ms": 0.1,
-                    "planning_time_ms": 0.3,
-                    "execution_time_ms": 1.2
-                }
-                return QueryResult(schema, data, metrics)
-            elif "count" in query_lower:
-               
-                schema = [
-                    {"name": "count", "type": "Integer"}
-                ]
-                data = [[len(self._stored_data)]] if self._stored_data else [[0]]
-                metrics = {
-                    "parsing_time_ms": 0.05,
-                    "planning_time_ms": 0.1,
-                    "execution_time_ms": 0.2
-                }
-                return QueryResult(schema, data, metrics)
-            elif query_lower.startswith("create graph"):
-               
+            # Only support basic queries in simulation mode
+            if query_lower.startswith("create graph"):
                 print("Graph created (simulated)")
                 return QueryResult()
-            elif query_lower.startswith("insert"):
-               
-                print("Data inserted (simulated)")
-                return QueryResult()
-            elif query_lower.startswith("delete"):
-               
-                print("Data deleted (simulated)")
-                return QueryResult()
             else:
-                
-                return QueryResult()
+                # For all other queries, raise an error indicating unimplemented functionality
+                raise RuntimeError("Rust bindings required for database operations")
     
     def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
