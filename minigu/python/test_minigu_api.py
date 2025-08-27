@@ -12,16 +12,16 @@ import sys
 import os
 
 # Add the python module to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'minigu', 'python'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-import minigu
+from minigu.python import minigu
 
 class TestMiniGUAPI(unittest.TestCase):
     """Test cases for the miniGU Python API."""
     
     def setUp(self):
         """Set up test fixtures before each test method."""
-        self.db = minigu.connect()
+        self.db = minigu.MiniGU()
     
     def tearDown(self):
         """Tear down test fixtures after each test method."""

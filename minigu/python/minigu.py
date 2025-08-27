@@ -10,6 +10,10 @@ from pathlib import Path
 import json
 import asyncio
 
+# Export public API
+__all__ = ['MiniGU', 'AsyncMiniGU', 'Node', 'Edge', 'Path', 'QueryResult', 
+           'MiniGUError', 'ConnectionError', 'QueryError', 'DataError', 'GraphError',
+           'connect', 'async_connect']
 
 # Try to import Rust bindings
 try:
