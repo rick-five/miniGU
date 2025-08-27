@@ -1,45 +1,39 @@
 use std::env;
+use std::fs;
+use std::path::Path;
 
 fn main() {
-    // Use PyO3's helper function to set the correct linker arguments for extension modules
-    #[cfg(target_os = "macos")]
-    pyo3_build_config::add_extension_module_link_args();
+    // Only run this build script when building for Python extension
+    if std::env::var("CARGO_CFG_TARGET_OS").map_or(false, |target_os| {
+        target_os == "linux" || target_os == "windows" || target_os == "macos"
+    }) {
+        // Ensure we link against the Python library correctly
+        pyo3_build_config::use_pyo3_cfgs();
+    }
 
-    // Special handling for macOS
-    if env::var("CARGO_CFG_TARGET_OS").is_ok_and(|os| os == "macos") {
-        // Check if we're cross-compiling to macOS ARM64
-        let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-        let is_cross_compiling = target_arch == "aarch64" && cfg!(not(target_arch = "aarch64"));
-        // Try to find Python framework
-        if let Ok(python_lib) = env::var("PYTHON_LIB") {
-            // Use the provided library flags
-            for flag in python_lib.split_whitespace() {
-                if let Some(lib_path) = flag.strip_prefix("-L") {
-                    println!("cargo:rustc-link-search=native={}", lib_path);
-                } else if let Some(lib_name) = flag.strip_prefix("-l") {
-                    println!("cargo:rustc-link-lib={}", lib_name);
-                } else if let Some(framework_name) = flag.strip_prefix("-framework ") {
-                    println!("cargo:rustc-link-lib=framework={}", framework_name);
-                }
+    // Print cargo metadata for pyo3
+    println!("cargo:rerun-if-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=pyproject.toml");
+    
+    // Generate the Python extension module
+    if let Ok(target_os) = std::env::var("CARGO_CFG_TARGET_OS") {
+        match target_os.as_str() {
+            "windows" => {
+                // On Windows, we may need to handle special linking
+                println!("cargo:rustc-link-lib=python3");
             }
-        } else if env::var("PYO3_PYTHON").is_ok() && !is_cross_compiling {
-            // Fallback to framework linking (only for native builds)
-            println!("cargo:rustc-link-lib=framework=Python");
-            println!("cargo:rustc-link-search=framework=/opt/homebrew/Frameworks");
-            println!("cargo:rustc-link-search=framework=/usr/local/Frameworks");
-        } else if is_cross_compiling {
-            // For cross-compilation to macOS ARM64, we might need special handling
-            // This is a simplified approach - in practice, you'd need to specify
-            // the correct paths to the macOS SDK and Python libraries
-            println!(
-                "cargo:warning=Cross-compiling to macOS ARM64 may require additional configuration"
-            );
-            println!("cargo:rustc-link-lib=framework=Python");
-        } else {
-            // Native build on macOS (Intel or Apple Silicon)
-            println!("cargo:rustc-link-lib=framework=Python");
-            println!("cargo:rustc-link-search=framework=/opt/homebrew/Frameworks");
-            println!("cargo:rustc-link-search=framework=/usr/local/Frameworks");
+            "macos" => {
+                // On macOS, use framework linking
+                println!("cargo:rustc-link-lib=framework=Python");
+                // Add common framework search paths
+                println!("cargo:rustc-link-search=framework=/opt/homebrew/Frameworks");
+                println!("cargo:rustc-link-search=framework=/usr/local/Frameworks");
+            }
+            "linux" => {
+                // On Linux, link against python3
+                println!("cargo:rustc-link-lib=python3");
+            }
+            _ => {}
         }
     }
 

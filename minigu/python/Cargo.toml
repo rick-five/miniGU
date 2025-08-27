@@ -16,11 +16,10 @@ minigu-catalog = { workspace = true }
 minigu-common = { workspace = true }
 minigu-context = { workspace = true }
 minigu-storage = { workspace = true }
-pyo3 = { workspace = true }
+pyo3 = { workspace = true, features = ["auto-initialize"] }
 serde_json = { workspace = true }
 
 [features]
-auto-initialize = []
 default = []
 
 [lints]
