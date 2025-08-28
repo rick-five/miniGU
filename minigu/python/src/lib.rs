@@ -12,18 +12,17 @@ use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
-#[allow(clippy::upper_case_acronyms)]
-pub struct PyMiniGU {
+pub struct PyMiniGu {
     database: Option<Database>,
     session: Option<Session>,
 }
 
 #[pymethods]
-impl PyMiniGU {
+impl PyMiniGu {
     /// Create a new PyMiniGU instance
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGU {
+        Ok(PyMiniGu {
             database: None,
             session: None,
         })
