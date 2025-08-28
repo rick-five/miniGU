@@ -10,19 +10,19 @@ use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
-/// PyMiniGU class that wraps the Rust Database
+/// PyMiniGu class that wraps the Rust Database
 #[pyclass]
-pub struct PyMiniGU {
+pub struct PyMiniGu {
     database: Option<Database>,
     session: Option<Session>,
 }
 
 #[pymethods]
-impl PyMiniGU {
-    /// Create a new PyMiniGU instance
+impl PyMiniGu {
+    /// Create a new PyMiniGu instance
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGU {
+        Ok(PyMiniGu {
             database: None,
             session: None,
         })
