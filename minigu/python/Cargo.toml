@@ -48,4 +48,4 @@ pyo3 = { workspace = true, features = [
 
 # Link Python framework on macOS
 [target.'cfg(target_os = "macos")'.build-dependencies]
-pyo3-build-config = { version = "0.24.2", features = ["resolve-config"] }
+# Already included from general build-dependencies
