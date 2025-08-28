@@ -1,10 +1,6 @@
-use std::env;
-use std::fs;
-use std::path::Path;
-
 fn main() {
     // Only run this build script when building for Python extension
-    if std::env::var("CARGO_CFG_TARGET_OS").map_or(false, |target_os| {
+    if std::env::var("CARGO_CFG_TARGET_OS").is_ok_and(|target_os| {
         target_os == "linux" || target_os == "windows" || target_os == "macos"
     }) {
         // Ensure we link against the Python library correctly
@@ -14,7 +10,7 @@ fn main() {
     // Print cargo metadata for pyo3
     println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-changed=pyproject.toml");
-    
+
     // Generate the Python extension module
     if let Ok(target_os) = std::env::var("CARGO_CFG_TARGET_OS") {
         match target_os.as_str() {

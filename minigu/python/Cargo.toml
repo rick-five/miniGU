@@ -20,7 +20,11 @@ pyo3 = { workspace = true, features = ["auto-initialize"] }
 serde_json = { workspace = true }
 
 [features]
-default = []
+default = ["pyo3"]
+pyo3 = []
+
+[build-dependencies]
+pyo3-build-config = { version = "0.24.2", features = ["resolve-config"] }
 
 [lints]
 workspace = true
