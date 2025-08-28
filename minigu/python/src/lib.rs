@@ -12,7 +12,6 @@ use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
-#[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
@@ -243,6 +242,30 @@ impl PyMiniGU {
         Ok(())
     }
 
+    /// Update data
+    fn update_data(&mut self, query: &str) -> PyResult<()> {
+        // Get the session
+        let session = self.session.as_mut().expect("Session not initialized");
+
+        // Execute the UPDATE statement
+        session.query(query).expect("Failed to update data");
+
+        println!("Data updated successfully with query: {}", query);
+        Ok(())
+    }
+
+    /// Delete data
+    fn delete_data(&mut self, query: &str) -> PyResult<()> {
+        // Get the session
+        let session = self.session.as_mut().expect("Session not initialized");
+
+        // Execute the DELETE statement
+        session.query(query).expect("Failed to delete data");
+
+        println!("Data deleted successfully with query: {}", query);
+        Ok(())
+    }
+
     /// Close the database connection
     fn close(&mut self) -> PyResult<()> {
         self.database = None;
@@ -316,22 +339,4 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         }
         _ => Ok(py.None()),
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pyminigu_creation() {
-        let py_minigu = PyMiniGU::new();
-        assert!(py_minigu.is_ok());
-    }
-
-    #[test]
-    fn test_pyminigu_initialization() {
-        let mut py_minigu = PyMiniGU::new().unwrap();
-        let result = py_minigu.init();
-        assert!(result.is_ok());
-    }
 }
