@@ -1,4 +1,7 @@
 # Main module initialization file
-from .minigu import connect, MiniGU, QueryResult, MiniGUError
-
-__all__ = ['connect', 'MiniGU', 'QueryResult', 'MiniGUError']
+try:
+    from .minigu_python import PyMiniGU
+    __all__ = ['PyMiniGU']
+except ImportError:
+    # Fallback if the Rust extension is not available
+    pass
