@@ -20,6 +20,3 @@ extension-module = ["pyo3/extension-module"]
 
 [lints]
 workspace = true
-
-[package.metadata.cargo-machete]
-ignored = ["minigu", "minigu-common", "arrow"]
