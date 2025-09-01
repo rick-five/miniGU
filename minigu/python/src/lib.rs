@@ -12,17 +12,18 @@ use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
-pub struct PyMiniGu {
+#[allow(clippy::upper_case_acronyms)]
+pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
 }
 
 #[pymethods]
-impl PyMiniGu {
+impl PyMiniGU {
     /// Create a new PyMiniGU instance
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGu {
+        Ok(PyMiniGU {
             database: None,
             session: None,
         })
@@ -105,9 +106,12 @@ impl PyMiniGu {
 
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace("'", "\\'");
-        
+
         // Execute the import procedure with correct syntax (no semicolon)
-        let query = format!("CALL import('test_graph', '{}', 'manifest.json')", sanitized_path);
+        let query = format!(
+            "CALL import('test_graph', '{}', 'manifest.json')",
+            sanitized_path
+        );
         match session.query(&query) {
             Ok(_) => {
                 println!("Data loaded successfully from: {}", path);
@@ -211,9 +215,12 @@ impl PyMiniGu {
 
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace("'", "\\'");
-        
+
         // Execute the export procedure with correct syntax (no semicolon)
-        let query = format!("CALL export('test_graph', '{}', 'manifest.json')", sanitized_path);
+        let query = format!(
+            "CALL export('test_graph', '{}', 'manifest.json')",
+            sanitized_path
+        );
         match session.query(&query) {
             Ok(_) => {
                 println!("Database saved successfully to: {}", path);
@@ -362,11 +369,4 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         }
         _ => Ok(py.None()),
     })
-}
-
-/// Python module initialization function
-#[pymodule]
-fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyMiniGU>()?;
-    Ok(())
 }
