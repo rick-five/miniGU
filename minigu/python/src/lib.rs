@@ -261,41 +261,6 @@ impl PyMiniGU {
         }
     }
 
-    /// Insert data
-    fn insert_data(&mut self, data: &str) -> PyResult<()> {
-        self.execute_query(data, "insert")
-    }
-
-    /// Update data
-    fn update_data(&mut self, query: &str) -> PyResult<()> {
-        self.execute_query(query, "update")
-    }
-
-    /// Delete data
-    fn delete_data(&mut self, query: &str) -> PyResult<()> {
-        self.execute_query(query, "delete")
-    }
-
-    /// Execute a data manipulation query
-    fn execute_query(&mut self, query: &str, operation: &str) -> PyResult<()> {
-        // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
-
-        // Execute the query
-        match session.query(query) {
-            Ok(_) => {
-                println!("Data {} successfully with query: {}", operation, query);
-                Ok(())
-            }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to {} data: {}",
-                operation, e
-            ))),
-        }
-    }
-
     /// Close the database connection
     fn close(&mut self) -> PyResult<()> {
         self.database = None;
