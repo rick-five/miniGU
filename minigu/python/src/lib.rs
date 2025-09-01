@@ -12,17 +12,17 @@ use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
-pub struct PyMiniGU {
+pub struct PyMiniGu {
     database: Option<Database>,
     session: Option<Session>,
 }
 
 #[pymethods]
-impl PyMiniGU {
+impl PyMiniGu {
     /// Create a new PyMiniGU instance
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGU {
+        Ok(PyMiniGu {
             database: None,
             session: None,
         })
@@ -99,16 +99,25 @@ impl PyMiniGU {
     /// Load data from a file
     fn load_from_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
+        // Sanitize the path to prevent injection attacks
+        let sanitized_path = path.replace("'", "\\'");
+        
         // Execute the import procedure with correct syntax (no semicolon)
-        let query = format!("CALL import('test_graph', '{}', 'manifest.json')", path);
-        session
-            .query(&query)
-            .expect("Failed to load data from file");
-
-        println!("Data loaded successfully from: {}", path);
-        Ok(())
+        let query = format!("CALL import('test_graph', '{}', 'manifest.json')", sanitized_path);
+        match session.query(&query) {
+            Ok(_) => {
+                println!("Data loaded successfully from: {}", path);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to load data from file: {}",
+                e
+            ))),
+        }
     }
 
     /// Load data directly
@@ -196,74 +205,88 @@ impl PyMiniGU {
     /// Save database to a file
     fn save_to_file(&mut self, path: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
+        // Sanitize the path to prevent injection attacks
+        let sanitized_path = path.replace("'", "\\'");
+        
         // Execute the export procedure with correct syntax (no semicolon)
-        let query = format!("CALL export('test_graph', '{}', 'manifest.json')", path);
-        session
-            .query(&query)
-            .expect("Failed to save database to file");
-
-        println!("Database saved successfully to: {}", path);
-        Ok(())
+        let query = format!("CALL export('test_graph', '{}', 'manifest.json')", sanitized_path);
+        match session.query(&query) {
+            Ok(_) => {
+                println!("Database saved successfully to: {}", path);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to save database to file: {}",
+                e
+            ))),
+        }
     }
 
     /// Create a graph
     fn create_graph(&mut self, name: &str, schema: Option<&str>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Create the graph using the create_test_graph procedure
-        let query = format!("CALL create_test_graph('{}');", name);
-        session
-            .query(&query)
-            .unwrap_or_else(|_| panic!("Failed to create graph '{}'", name));
+        let query = format!("CALL create_test_graph('{}')", name);
+        match session.query(&query) {
+            Ok(_) => {
+                println!("Graph '{}' created successfully", name);
 
-        println!("Graph '{}' created successfully", name);
+                // If schema is provided, we could process it here
+                if let Some(schema_str) = schema {
+                    println!("Schema provided but not yet implemented: {}", schema_str);
+                    // In a full implementation, we would parse the schema and add vertex/edge types
+                }
 
-        // If schema is provided, we could process it here
-        if let Some(schema_str) = schema {
-            println!("Schema provided but not yet implemented: {}", schema_str);
-            // In a full implementation, we would parse the schema and add vertex/edge types
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to create graph '{}': {}",
+                name, e
+            ))),
         }
-
-        Ok(())
     }
 
     /// Insert data
     fn insert_data(&mut self, data: &str) -> PyResult<()> {
-        // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
-
-        // Execute the INSERT statement
-        session.query(data).expect("Failed to insert data");
-
-        println!("Data inserted successfully: {}", data);
-        Ok(())
+        self.execute_query(data, "insert")
     }
 
     /// Update data
     fn update_data(&mut self, query: &str) -> PyResult<()> {
-        // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
-
-        // Execute the UPDATE statement
-        session.query(query).expect("Failed to update data");
-
-        println!("Data updated successfully with query: {}", query);
-        Ok(())
+        self.execute_query(query, "update")
     }
 
     /// Delete data
     fn delete_data(&mut self, query: &str) -> PyResult<()> {
+        self.execute_query(query, "delete")
+    }
+
+    /// Execute a data manipulation query
+    fn execute_query(&mut self, query: &str, operation: &str) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
-        // Execute the DELETE statement
-        session.query(query).expect("Failed to delete data");
-
-        println!("Data deleted successfully with query: {}", query);
-        Ok(())
+        // Execute the query
+        match session.query(query) {
+            Ok(_) => {
+                println!("Data {} successfully with query: {}", operation, query);
+                Ok(())
+            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to {} data: {}",
+                operation, e
+            ))),
+        }
     }
 
     /// Close the database connection
@@ -339,4 +362,11 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         }
         _ => Ok(py.None()),
     })
+}
+
+/// Python module initialization function
+#[pymodule]
+fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyMiniGU>()?;
+    Ok(())
 }
