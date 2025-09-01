@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'minigu', 'pyth
 
 import minigu
 
+
 class TestMiniGUAPI(unittest.TestCase):
     """Test cases for the miniGU Python API."""
     
@@ -62,8 +63,9 @@ class TestMiniGUAPI(unittest.TestCase):
         }
         try:
             self.db.create_graph("test_graph_with_schema", schema)
-            # If no exception is raised, the test passes
-            # TODO: 验证schema是否正确应用
+            # Check if schema is correctly applied
+            # This would require querying the database to verify the schema
+            # For now, we just check that the method doesn't raise an exception
         except minigu.GraphError:
             # GraphError is expected if the implementation is incomplete
             pass
@@ -88,6 +90,7 @@ class TestMiniGUAPI(unittest.TestCase):
         ]
         try:
             self.db.insert(sample_data)
+            # Check that data was inserted by verifying no exception was raised
         except Exception as e:
             # Insert might fail if not implemented
             self.skipTest("Data insertion not implemented")

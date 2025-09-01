@@ -15,18 +15,14 @@ import asyncio
 try:
     from . import minigu_python
     from .minigu_python import PyMiniGU
-    HAS_RUST_BINDINGS = True
 except (ImportError, ModuleNotFoundError):
     try:
         # Try alternative import path
         import minigu_python
         from minigu_python import PyMiniGU
-        HAS_RUST_BINDINGS = True
     except (ImportError, ModuleNotFoundError):
-        HAS_RUST_BINDINGS = False
         # No longer provide simulated implementation warning, directly raise exception
         raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
-        print("Warning: Rust bindings not available. Using simulated implementation.")
 
 
 class Node:
@@ -159,9 +155,9 @@ class QueryResult:
 
 class AsyncMiniGU:
     """
-    Asynchronous miniGU database connection class.
+    Async miniGU database connection class.
     
-    This class provides an asynchronous interface for interacting with a miniGU database.
+    This class provides an async interface for interacting with a miniGU database.
     It supports connecting to the database, executing queries, and managing graph data.
     
     Attributes:
@@ -174,7 +170,7 @@ class AsyncMiniGU:
                  cache_size: int = 1000,
                  enable_logging: bool = False):
         """
-        Initialize asynchronous miniGU database connection.
+        Initialize async miniGU database connection.
         
         Args:
             db_path: Database file path, if None creates an in-memory database
@@ -843,19 +839,15 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-            try:
-                if isinstance(data, (str, Path)):
-                    self._rust_instance.load_from_file(str(data))
-                else:
-                    self._rust_instance.load_data(data)
-                print(f"Data loaded successfully")
-            except Exception as e:
-                raise DataError(f"Data loading failed: {str(e)}")
-        else:
-            # 当没有Rust绑定时，直接抛出异常而不是提供模拟实现
-            raise RuntimeError("Rust bindings required for database operations")
-    
+        try:
+            if isinstance(data, (str, Path)):
+                self._rust_instance.load_from_file(str(data))
+            else:
+                self._rust_instance.load_data(data)
+            print(f"Data loaded successfully")
+        except Exception as e:
+            raise DataError(f"Data loading failed: {str(e)}")
+
     def save(self, path: str) -> None:
         """
         Save the database to the specified path
