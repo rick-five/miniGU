@@ -15,13 +15,16 @@ import asyncio
 try:
     from . import minigu_python
     from .minigu_python import PyMiniGU
+    HAS_RUST_BINDINGS = True
 except (ImportError, ModuleNotFoundError):
     try:
         # Try alternative import path
         import minigu_python
         from minigu_python import PyMiniGU
+        HAS_RUST_BINDINGS = True
     except (ImportError, ModuleNotFoundError):
         # No longer provide simulated implementation warning, directly raise exception
+        HAS_RUST_BINDINGS = False
         raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
@@ -239,8 +242,17 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            # When Rust bindings are not available, raise an error directly
-            raise RuntimeError("Rust bindings required for database operations")
+            try:
+                if self._stored_data:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        json.dump(self._stored_data, f, ensure_ascii=False, indent=2)
+                    print(f"Database saved to {path} as JSON")
+                else:
+                    with open(path, 'w') as f:
+                        f.write("")
+                    print(f"Empty database saved to {path}")
+            except Exception as e:
+                raise DataError(f"Database save failed: {str(e)}")
     
     async def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
@@ -655,36 +667,12 @@ class AsyncMiniGU:
             }
             return stats
     
-    def close(self) -> None:
-        """
-        Close database connection.
-        """
-        if self.is_connected:
-            if HAS_RUST_BINDINGS and self._rust_instance:
-                self._rust_instance.close()
-            self.is_connected = False
-            print("Database connection closed")
-    
-    
     async def __aenter__(self):
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
         return False
-
-    async def close(self) -> None:
-        """
-        Close database connection asynchronously.
-        """
-        if self.is_connected:
-            if HAS_RUST_BINDINGS and self._rust_instance:
-                self._rust_instance.close()
-            self.is_connected = False
-            print("Database connection closed")
-        
-        await asyncio.sleep(0)  
-
 
 class MiniGU:
     """
@@ -753,77 +741,14 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            
-            try:
-                result = self._rust_instance.execute(query)
-        
-                return QueryResult(
-                    schema=result.get("schema", []),
-                    data=result.get("data", []),
-                    metrics=result.get("metrics", {})
-                )
-            except Exception as e:
-                raise QueryError(f"Query execution failed: {str(e)}")
+            # Execute query using Rust backend
+            result_dict = self._rust_instance.execute(query)
+            schema = result_dict.get("schema", [])
+            data = result_dict.get("data", [])
+            metrics = result_dict.get("metrics", {})
+            return QueryResult(schema, data, metrics)
         else:
-            
-            print(f"Executing query: {query}")
-            
-
-            query_lower = query.lower().strip()
-            
-            if query_lower.startswith("match") or query_lower.startswith("select"):
-
-                schema = [
-                    {"name": "node_id", "type": "Integer"},
-                    {"name": "node_label", "type": "String"},
-                    {"name": "properties", "type": "Map"}
-                ]
-                
-                if self._stored_data:
-                    data = []
-                    for i, item in enumerate(self._stored_data):
-                        data.append([i+1, item.get("label", "Node"), item])
-                else:
-
-                    data = [
-                        [1, "Person", {"name": "Alice", "age": 30}],
-                        [2, "Person", {"name": "Bob", "age": 25}],
-                        [3, "Company", {"name": "TechCorp", "founded": 2010}]
-                    ]
-                    
-                metrics = {
-                    "parsing_time_ms": 0.1,
-                    "planning_time_ms": 0.3,
-                    "execution_time_ms": 1.2
-                }
-                return QueryResult(schema, data, metrics)
-            elif "count" in query_lower:
-               
-                schema = [
-                    {"name": "count", "type": "Integer"}
-                ]
-                data = [[len(self._stored_data)]] if self._stored_data else [[0]]
-                metrics = {
-                    "parsing_time_ms": 0.05,
-                    "planning_time_ms": 0.1,
-                    "execution_time_ms": 0.2
-                }
-                return QueryResult(schema, data, metrics)
-            elif query_lower.startswith("create graph"):
-               
-                print("Graph created (simulated)")
-                return QueryResult()
-            elif query_lower.startswith("insert"):
-               
-                print("Data inserted (simulated)")
-                return QueryResult()
-            elif query_lower.startswith("delete"):
-               
-                print("Data deleted (simulated)")
-                return QueryResult()
-            else:
-                
-                return QueryResult()
+            raise RuntimeError("Rust bindings required for database operations")
     
     def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
@@ -839,14 +764,17 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        try:
-            if isinstance(data, (str, Path)):
-                self._rust_instance.load_from_file(str(data))
-            else:
-                self._rust_instance.load_data(data)
-            print(f"Data loaded successfully")
-        except Exception as e:
-            raise DataError(f"Data loading failed: {str(e)}")
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                if isinstance(data, (str, Path)):
+                    self._rust_instance.load_from_file(str(data))
+                else:
+                    self._rust_instance.load_data(data)
+                print(f"Data loaded successfully")
+            except Exception as e:
+                raise DataError(f"Data loading failed: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
 
     def save(self, path: str) -> None:
         """
@@ -863,34 +791,20 @@ class MiniGU:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-          
             try:
                 self._rust_instance.save_to_file(path)
                 print(f"Database saved to {path}")
             except Exception as e:
                 raise DataError(f"Database save failed: {str(e)}")
         else:
-           
-            try:
-                
-                if self._stored_data:
-                    with open(path, 'w', encoding='utf-8') as f:
-                        json.dump(self._stored_data, f, ensure_ascii=False, indent=2)
-                    print(f"Database saved to {path} as JSON")
-                else:
-                    
-                    with open(path, 'w') as f:
-                        f.write("")
-                    print(f"Empty database saved to {path}")
-            except Exception as e:
-                raise DataError(f"Database save failed: {str(e)}")
+            raise RuntimeError("Rust bindings required for database operations")
     
-    def create_graph(self, graph_name: str, schema: Optional[Dict] = None) -> None:
+    def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
         """
         Create a graph database
         
         Args:
-            graph_name: Graph name
+            name: Graph name
             schema: Graph schema definition (optional)
             
         Raises:
@@ -902,29 +816,35 @@ class MiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # 临时禁用Rust绑定的create_graph方法，避免panic
-                # 如果schema是字典，将其转换为字符串
-                # if schema is not None and not isinstance(schema, str):
-                #     schema_str = self._format_schema(schema)
-                #     self._rust_instance.create_graph(graph_name, schema_str)
-                # else:
-                #     self._rust_instance.create_graph(graph_name, schema)
-                print(f"Graph '{graph_name}' created")
+                self._rust_instance.create_graph(name, json.dumps(schema) if schema else None)
+                print(f"Graph '{name}' created successfully")
             except Exception as e:
-                # 捕获异常但不抛出，避免测试失败
-                print(f"Warning: Graph creation failed: {str(e)}")
+                raise GraphError(f"Graph creation failed: {str(e)}")
         else:
-            if schema:
-                # 如果schema是字典，正确处理它
-                if isinstance(schema, dict):
-                    query = f"CREATE GRAPH {graph_name} {{ {self._format_schema(schema)} }}"
-                else:
-                    query = f"CREATE GRAPH {graph_name} {{ {schema} }}"
-            else:
-                query = f"CREATE GRAPH {graph_name} ANY"
+            raise RuntimeError("Rust bindings required for database operations")
+        # 临时禁用Rust绑定的create_graph方法，避免panic
+        # 如果schema是字典，将其转换为字符串
+        # if schema is not None and not isinstance(schema, str):
+        #     schema_str = self._format_schema(schema)
+        #     self._rust_instance.create_graph(graph_name, schema_str)
+        # else:
+        #     self._rust_instance.create_graph(graph_name, schema)
+        # print(f"Graph '{graph_name}' created")
+        # except Exception as e:
+        #     # 捕获异常但不抛出，避免测试失败
+        #     print(f"Warning: Graph creation failed: {str(e)}")
+        # else:
+        #     if schema:
+        #         # 如果schema是字典，正确处理它
+        #         if isinstance(schema, dict):
+        #             query = f"CREATE GRAPH {graph_name} {{ {self._format_schema(schema)} }}"
+        #         else:
+        #             query = f"CREATE GRAPH {graph_name} {{ {schema} }}"
+        #     else:
+        #         query = f"CREATE GRAPH {graph_name} ANY"
             
-            self.execute(query)
-            print(f"Graph '{graph_name}' created (simulated)")
+        #     self.execute(query)
+        #     print(f"Graph '{graph_name}' created (simulated)")
 
 
 def connect(db_path: Optional[str] = None,
