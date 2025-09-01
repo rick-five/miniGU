@@ -105,9 +105,12 @@ impl PyMiniGu {
 
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace("'", "\\'");
-        
+
         // Execute the import procedure with correct syntax (no semicolon)
-        let query = format!("CALL import('test_graph', '{}', 'manifest.json')", sanitized_path);
+        let query = format!(
+            "CALL import('test_graph', '{}', 'manifest.json')",
+            sanitized_path
+        );
         match session.query(&query) {
             Ok(_) => {
                 println!("Data loaded successfully from: {}", path);
@@ -211,9 +214,12 @@ impl PyMiniGu {
 
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace("'", "\\'");
-        
+
         // Execute the export procedure with correct syntax (no semicolon)
-        let query = format!("CALL export('test_graph', '{}', 'manifest.json')", sanitized_path);
+        let query = format!(
+            "CALL export('test_graph', '{}', 'manifest.json')",
+            sanitized_path
+        );
         match session.query(&query) {
             Ok(_) => {
                 println!("Database saved successfully to: {}", path);
@@ -362,11 +368,4 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         }
         _ => Ok(py.None()),
     })
-}
-
-/// Python module initialization function
-#[pymodule]
-fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyMiniGU>()?;
-    Ok(())
 }
