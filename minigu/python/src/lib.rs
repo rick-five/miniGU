@@ -12,6 +12,7 @@ use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
+#[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
@@ -369,3 +370,4 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         _ => Ok(py.None()),
     })
 }
+ 
