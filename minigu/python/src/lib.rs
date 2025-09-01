@@ -370,4 +370,3 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         _ => Ok(py.None()),
     })
 }
- 
