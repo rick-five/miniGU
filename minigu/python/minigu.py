@@ -242,17 +242,8 @@ class AsyncMiniGU:
             except Exception as e:
                 raise QueryError(f"Query execution failed: {str(e)}")
         else:
-            try:
-                if self._stored_data:
-                    with open(path, 'w', encoding='utf-8') as f:
-                        json.dump(self._stored_data, f, ensure_ascii=False, indent=2)
-                    print(f"Database saved to {path} as JSON")
-                else:
-                    with open(path, 'w') as f:
-                        f.write("")
-                    print(f"Empty database saved to {path}")
-            except Exception as e:
-                raise DataError(f"Database save failed: {str(e)}")
+            # When Rust bindings are not available, raise an error directly
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
@@ -398,10 +389,8 @@ class AsyncMiniGU:
         
             try:
                 if isinstance(data, str):
-                    
                     self._rust_instance.insert_data(data)
                 else:
-                    
                     gql_data = await self._format_insert_data(data)
                     self._rust_instance.insert_data(gql_data)
                 print(f"Data inserted successfully")
@@ -573,7 +562,6 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set cache size: {str(e)}")
         else:
-            
             raise RuntimeError("Rust bindings required for database operations")
     
     async def set_thread_count(self, count: int) -> None:
@@ -601,7 +589,6 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set thread count: {str(e)}")
         else:
-            
             raise RuntimeError("Rust bindings required for database operations")
     
     async def enable_query_logging(self, enable: bool = True) -> None:
@@ -630,7 +617,6 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to set query logging: {str(e)}")
         else:
-        
             raise RuntimeError("Rust bindings required for database operations")
     
     async def get_performance_stats(self) -> Dict[str, Any]:
@@ -657,15 +643,7 @@ class AsyncMiniGU:
             except Exception as e:
                 raise DataError(f"Failed to get performance stats: {str(e)}")
         else:
-    
-            stats = {
-                "cache_hits": 0,
-                "cache_misses": 0,
-                "query_count": 0,
-                "total_query_time_ms": 0.0,
-                "average_query_time_ms": 0.0
-            }
-            return stats
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def __aenter__(self):
         return self
