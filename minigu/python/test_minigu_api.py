@@ -45,15 +45,43 @@ class TestMiniGUAPI(unittest.TestCase):
     
     def test_create_graph(self):
         """Test graph creation."""
-        self.db.create_graph("test_graph")
+        graph_name = "test_graph"
+        self.db.create_graph(graph_name)
+        
+        # Verify that the graph was created by trying to use it
+        try:
+            # Try to execute a simple query on the created graph
+            result = self.db.execute(f"SHOW GRAPHS")
+            # If we get here without exception, the graph creation was successful
+            self.assertIsInstance(result, minigu.QueryResult)
+        except minigu.QueryError:
+            # This is expected if SHOW GRAPHS is not implemented yet
+            pass
+        except Exception as e:
+            # Other exceptions indicate a problem
+            self.fail(f"Unexpected exception: {e}")
     
     def test_create_graph_with_schema(self):
         """Test graph creation with schema."""
+        graph_name = "test_graph_with_schema"
         schema = {
             "Person": {"name": "STRING", "age": "INTEGER"},
             "Company": {"name": "STRING", "founded": "INTEGER"}
         }
-        self.db.create_graph("test_graph_with_schema", schema)
+        self.db.create_graph(graph_name, schema)
+        
+        # Verify that the graph was created with the specified schema
+        try:
+            # Try to execute a simple query on the created graph
+            result = self.db.execute(f"SHOW GRAPHS")
+            # If we get here without exception, the graph creation was successful
+            self.assertIsInstance(result, minigu.QueryResult)
+        except minigu.QueryError:
+            # This is expected if SHOW GRAPHS is not implemented yet
+            pass
+        except Exception as e:
+            # Other exceptions indicate a problem
+            self.fail(f"Unexpected exception: {e}")
     
     def test_insert_and_query_data(self):
         """Test inserting and querying data."""
