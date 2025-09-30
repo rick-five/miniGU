@@ -1,7 +1,7 @@
 """
-miniGU Python API Enhanced Version
+miniGU Python API
 
-Adding missing functionality to the existing implementation
+This module provides Python bindings for the miniGU graph database.
 """
 
 import sys
@@ -201,7 +201,7 @@ class AsyncMiniGU:
             if HAS_RUST_BINDINGS:
                 self._rust_instance = PyMiniGU()
                 self._rust_instance.init()
-                # Set configuration options (only in synchronous mode)
+                # Initialize configuration options
                 if not asyncio.iscoroutinefunction(self.set_thread_count):
                     self.set_thread_count(self.thread_count)
                     self.set_cache_size(self.cache_size)
@@ -333,158 +333,15 @@ class AsyncMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # 如果schema是字典，将其转换为字符串
+                # Convert schema dictionary to JSON string if needed
                 if schema is not None and not isinstance(schema, str):
-                    schema_str = self._format_schema(schema)
+                    schema_str = json.dumps(schema)
                     self._rust_instance.create_graph(graph_name, schema_str)
                 else:
                     self._rust_instance.create_graph(graph_name, schema)
-                print(f"Graph '{graph_name}' created")
+                print(f"Graph '{graph_name}' created successfully")
             except Exception as e:
-                raise GraphError(f"Graph creation failed: {str(e)}")
-        else:
-            # When Rust bindings are not available, raise an error directly
-            raise RuntimeError("Rust bindings required for database operations")
-    
-    def _format_schema(self, schema: Dict) -> str:
-        """
-        Format graph schema definition.
-        
-        Args:
-            schema: Graph schema definition (e.g., {"Person": {"name": "STRING", "age": "INTEGER"}})
-            
-        Returns:
-            Formatted schema string suitable for GQL CREATE GRAPH statement
-            
-        Example:
-            >>> _format_schema({"Person": {"name": "STRING", "age": "INTEGER"}})
-            '(Person :Person {name STRING, age INTEGER})'
-        """
-        elements = []
-        for label, properties in schema.items():
-            # Format properties correctly, ensuring proper spacing
-            props = ", ".join([f"{name} {p_type}" for name, p_type in properties.items()])
-            # Use consistent formatting with colon before label and proper braces
-            elements.append(f"(:{label} {{{props}}})")
-        
-        # Join elements with semicolon and space for proper GQL syntax
-        return ") ; ".join(elements)
-    
-    async def insert(self, data: Union[List[Dict], str]) -> None:
-        """
-        Insert data into the current graph asynchronously.
-        
-        Args:
-            data: List of data to insert or GQL INSERT statement
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-            DataError: Raised when data insertion fails
-        """
-
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        if HAS_RUST_BINDINGS and self._rust_instance:
-        
-            try:
-                if isinstance(data, str):
-                    self._rust_instance.insert_data(data)
-                else:
-                    gql_data = await self._format_insert_data(data)
-                    self._rust_instance.insert_data(gql_data)
-                print(f"Data inserted successfully")
-            except Exception as e:
-                raise DataError(f"Data insertion failed: {str(e)}")
-        else:
-            # When Rust bindings are not available, raise an error directly
-            raise RuntimeError("Rust bindings required for database operations")
-    
-    def _format_insert_data(self, data: List[Dict]) -> str:
-        """
-        Format data as GQL INSERT statement.
-        
-        Args:
-            data: List of data to insert
-            
-        Returns:
-            GQL INSERT statement fragment
-        """
-        # Based on the GQL examples, we should use :Label syntax instead of (Label)
-        # and generate separate INSERT statements for each record
-        statements = []
-        for item in data:
-            label = item.get("label", "Node")
-            # Format properties correctly for GQL
-            # Based on examples, we should not put quotes around all values
-            props = []
-            for k, v in item.items():
-                if k != "label":
-                    # Handle different data types appropriately
-                    if isinstance(v, str):
-                        props.append(f"{k}: '{v}'")
-                    elif isinstance(v, (int, float)):
-                        props.append(f"{k}: {v}")
-                    else:
-                        # For other types, convert to string and quote
-                        props.append(f"{k}: '{str(v)}'")
-            
-            props_str = ", ".join(props)
-            # Based on GQL examples, use :Label syntax and separate INSERT statements
-            statement = f"INSERT :{label} {{ {props_str} }}"
-            statements.append(statement)
-            
-        # Join statements with semicolon and space
-        return "; ".join(statements)
-    
-    async def update(self, query: str) -> None:
-        """
-        Update data in the current graph using a GQL UPDATE statement asynchronously.
-        
-        Args:
-            query: GQL UPDATE statement
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-            QueryError: Raised when query execution fails
-        """
-
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        if HAS_RUST_BINDINGS and self._rust_instance:
-        
-            try:
-                self._rust_instance.update_data(query)
-                print(f"Data updated successfully with query: {query}")
-            except Exception as e:
-                raise QueryError(f"Data update failed: {str(e)}")
-        else:
-            # When Rust bindings are not available, raise an error directly
-            raise RuntimeError("Rust bindings required for database operations")
-    
-    async def delete(self, query: str) -> None:
-        """
-        Delete data from the current graph using a GQL DELETE statement asynchronously.
-        
-        Args:
-            query: GQL DELETE statement
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-            QueryError: Raised when query execution fails
-        """
-        
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        if HAS_RUST_BINDINGS and self._rust_instance:
-            
-            try:
-                self._rust_instance.delete_data(query)
-                print(f"Data deleted successfully with query: {query}")
-            except Exception as e:
-                raise QueryError(f"Data deletion failed: {str(e)}")
+                raise GraphError(f"Failed to create graph: {str(e)}")
         else:
             # When Rust bindings are not available, raise an error directly
             raise RuntimeError("Rust bindings required for database operations")
@@ -537,120 +394,13 @@ class AsyncMiniGU:
         await asyncio.sleep(0.01)
         return Path(nodes, edges)
     
-    # Enhanced features: Performance configuration and statistics methods
-    async def set_cache_size(self, size: int) -> None:
-        """
-        Set the size of the query result cache asynchronously.
-        
-        Args:
-            size: Cache size in number of entries
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-        """
-        
-        await asyncio.sleep(0.01)
-        
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_cache_size'):
-            try:
-                self._rust_instance.set_cache_size(size)
-                self.cache_size = size
-                print(f"Cache size set to {size} entries")
-            except Exception as e:
-                raise DataError(f"Failed to set cache size: {str(e)}")
-        else:
-            raise RuntimeError("Rust bindings required for database operations")
-    
-    async def set_thread_count(self, count: int) -> None:
-        """
-        Set the number of threads for parallel query execution asynchronously.
-        
-        Args:
-            count: Number of threads
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-        """
-        
-        await asyncio.sleep(0.01)
-        
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        
-        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'set_thread_count'):
-            try:
-                self._rust_instance.set_thread_count(count)
-                self.thread_count = count
-                print(f"Thread count set to {count}")
-            except Exception as e:
-                raise DataError(f"Failed to set thread count: {str(e)}")
-        else:
-            raise RuntimeError("Rust bindings required for database operations")
-    
-    async def enable_query_logging(self, enable: bool = True) -> None:
-        """
-        Enable or disable query execution logging asynchronously.
-        
-        Args:
-            enable: Whether to enable logging
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-        """
-
-        await asyncio.sleep(0.01)
-        
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        
-        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'enable_query_logging'):
-            try:
-                self._rust_instance.enable_query_logging(enable)
-                self.enable_logging = enable
-                status = "enabled" if enable else "disabled"
-                print(f"Query logging {status}")
-            except Exception as e:
-                raise DataError(f"Failed to set query logging: {str(e)}")
-        else:
-            raise RuntimeError("Rust bindings required for database operations")
-    
-    async def get_performance_stats(self) -> Dict[str, Any]:
-        """
-        Get database performance statistics asynchronously.
-        
-        Returns:
-            Dictionary containing performance statistics
-            
-        Raises:
-            MiniGUError: Raised when database is not connected
-        """
-
-        await asyncio.sleep(0.01)
-        
-        if not self.is_connected:
-            raise MiniGUError("Database not connected")
-        
-        
-        if HAS_RUST_BINDINGS and hasattr(self._rust_instance, 'get_performance_stats'):
-            try:
-                stats = self._rust_instance.get_performance_stats()
-                return stats
-            except Exception as e:
-                raise DataError(f"Failed to get performance stats: {str(e)}")
-        else:
-            raise RuntimeError("Rust bindings required for database operations")
-    
     async def __aenter__(self):
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
         return False
+
 
 class MiniGU:
     """
@@ -800,29 +550,6 @@ class MiniGU:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
-        # 临时禁用Rust绑定的create_graph方法，避免panic
-        # 如果schema是字典，将其转换为字符串
-        # if schema is not None and not isinstance(schema, str):
-        #     schema_str = self._format_schema(schema)
-        #     self._rust_instance.create_graph(graph_name, schema_str)
-        # else:
-        #     self._rust_instance.create_graph(graph_name, schema)
-        # print(f"Graph '{graph_name}' created")
-        # except Exception as e:
-        #     # 捕获异常但不抛出，避免测试失败
-        #     print(f"Warning: Graph creation failed: {str(e)}")
-        # else:
-        #     if schema:
-        #         # 如果schema是字典，正确处理它
-        #         if isinstance(schema, dict):
-        #             query = f"CREATE GRAPH {graph_name} {{ {self._format_schema(schema)} }}"
-        #         else:
-        #             query = f"CREATE GRAPH {graph_name} {{ {schema} }}"
-        #     else:
-        #         query = f"CREATE GRAPH {graph_name} ANY"
-            
-        #     self.execute(query)
-        #     print(f"Graph '{graph_name}' created (simulated)")
 
 
 def connect(db_path: Optional[str] = None,
@@ -862,48 +589,3 @@ async def async_connect(db_path: Optional[str] = None,
     """
     connection = AsyncMiniGU(db_path, thread_count, cache_size, enable_logging)
     return connection
-
-if __name__ == "__main__":
-
-    with connect() as db:
-
-        result = db.execute("MATCH (n) RETURN n;")
-        print(result)
-        print("As dictionary list:", result.to_list())
-        
-        print("Query metrics:", result.metrics)
-        
-
-        sample_data = [
-            {"name": "Alice", "age": 30, "label": "Person"},
-            {"name": "Bob", "age": 25, "label": "Person"},
-            {"name": "TechCorp", "founded": 2010, "label": "Company"}
-        ]
-        db.load(sample_data)
-        
-        db.save("example.mgu")
-    
-
-    db = connect("example.db")
-    try:
-        result = db.execute("MATCH (n:Person) RETURN n.name, n.age;")
-        print(result.to_list())
-        
-        db.create_graph("social_network", {
-            "Person": {"name": "STRING", "age": "INTEGER"},
-            "Company": {"name": "STRING", "founded": "INTEGER"}
-        })
-        
-        
-        db.insert([
-            {"name": "Charlie", "age": 35, "label": "Person"},
-            {"name": "InnovateCo", "founded": 2015, "label": "Company"}
-        ])
-        
-        
-        db.insert("VERTEX Person {name: 'David', age: 28}")
-        
-    
-        db.save("social_network.mgu")
-    finally:
-        db.close()
