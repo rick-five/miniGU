@@ -585,3 +585,6 @@ async def async_connect(db_path: Optional[str] = None,
         enable_logging: Whether to enable query execution logging
         
     Returns:
+        AsyncMiniGU database connection object
+    """
+    return AsyncMiniGU(db_path, thread_count, cache_size, enable_logging)
