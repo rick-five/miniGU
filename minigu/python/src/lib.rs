@@ -335,3 +335,10 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
         _ => Ok(py.None()),
     })
 }
+
+/// Python module for miniGU
+#[pymodule]
+fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyMiniGU>()?;
+    Ok(())
+}
