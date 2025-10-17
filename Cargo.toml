@@ -19,6 +19,7 @@ members = [
     "minigu/context",
     "minigu/python",
 ]
+
 resolver = "3"
 
 [workspace.package]
