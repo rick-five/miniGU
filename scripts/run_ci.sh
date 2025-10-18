@@ -23,19 +23,29 @@ cargo doc --lib --no-deps --features "${DEFAULT_FEATURES:-std,serde,miette}"
 # Python API 测试
 echo "Running Python API tests..."
 cd minigu/python
-# 创建Python虚拟环境
-python -m venv .venv
-# 激活虚拟环境 (兼容Linux/macOS和Windows)
-if [ -f ".venv/bin/activate" ]; then
-    source .venv/bin/activate
-elif [ -f ".venv/Scripts/activate" ]; then
-    source .venv/Scripts/activate
+# 检查Python是否可用
+if ! command -v python &> /dev/null && ! command -v python3 &> /dev/null; then
+    echo "Python is not available, skipping Python tests"
+    exit 0
 fi
-# 升级pip并安装maturin
-pip install --upgrade pip
+# 确保使用python3命令
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD=python3
+else
+    PYTHON_CMD=python
+fi
+# 安装maturin
 pip install maturin
-# 使用maturin构建Python模块
-maturin develop
+# 使用maturin构建wheel并安装
+maturin build
+# 查找构建的wheel文件并安装
+WHEEL_FILE=$(find target/wheels -name "*.whl" | head -n 1)
+if [ -n "$WHEEL_FILE" ]; then
+    pip install "$WHEEL_FILE"
+else
+    echo "No wheel file found, trying maturin develop as fallback"
+    maturin develop
+fi
 # 运行Python测试
-python test_minigu_api.py
+$PYTHON_CMD test_minigu_api.py
 echo "Python API tests completed."
