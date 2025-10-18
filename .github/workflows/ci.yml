@@ -139,18 +139,33 @@ jobs:
       run: |
         cd minigu/python
         python -m venv .venv
-        source .venv/bin/activate
+        # 激活虚拟环境 (跨平台方式)
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
         python -m pip install --upgrade pip
         pip install maturin
     - name: Build Python extension
       run: |
         cd minigu/python
-        source .venv/bin/activate
+        # 激活虚拟环境 (跨平台方式)
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
         maturin develop
     - name: Run Python tests
       run: |
         cd minigu/python
-        source .venv/bin/activate
+        # 激活虚拟环境 (跨平台方式)
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
         python test_minigu_api.py
 
   docs:
