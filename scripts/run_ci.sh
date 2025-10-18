@@ -19,3 +19,13 @@ cargo test --features "${DEFAULT_FEATURES:-std,serde,miette}" --doc
 
 # 文档构建
 cargo doc --lib --no-deps --features "${DEFAULT_FEATURES:-std,serde,miette}"
+
+# Python API 测试
+echo "Running Python API tests..."
+cd minigu/python
+# 使用maturin构建Python模块
+pip install maturin
+maturin develop
+# 运行Python测试
+python test_minigu_api.py
+echo "Python API tests completed."
