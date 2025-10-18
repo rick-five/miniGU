@@ -18,9 +18,7 @@ classifiers = [
     "Programming Language :: Rust",
 ]
 description = "A graph database for learning purposes"
-license = { file = "LICENSE" }
 name = "minigu"
-readme = "README.md"
 requires-python = ">=3.7"
 version = "0.1.0"
 
