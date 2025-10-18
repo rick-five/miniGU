@@ -23,8 +23,12 @@ cargo doc --lib --no-deps --features "${DEFAULT_FEATURES:-std,serde,miette}"
 # Python API 测试
 echo "Running Python API tests..."
 cd minigu/python
-# 使用maturin构建Python模块
+# 创建并激活Python虚拟环境
+python -m venv .venv
+source .venv/bin/activate || .venv\Scripts\activate
+# 安装maturin到虚拟环境
 pip install maturin
+# 使用maturin构建Python模块
 maturin develop
 # 运行Python测试
 python test_minigu_api.py
