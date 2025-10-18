@@ -37,52 +37,42 @@ else
     PYTHON_CMD=python
 fi
 
-# 检查pip是否可用
-if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
-    echo "pip is not available, trying to install pip..."
-    # 尝试安装pip
-    if command -v apt-get &> /dev/null; then
-        apt-get update && apt-get install -y python3-pip
-    elif command -v yum &> /dev/null; then
-        yum install -y python3-pip
-    else
-        echo "Cannot install pip, skipping Python tests"
-        exit 0
+# 检查系统类型，如果是Linux则确保安装了venv模块
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if ! $PYTHON_CMD -c "import venv" &> /dev/null; then
+        echo "Python venv module not available, trying to install python3-venv"
+        if command -v apt-get &> /dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y python3-venv
+        else
+            echo "Cannot install python3-venv, skipping Python tests"
+            exit 0
+        fi
     fi
 fi
 
-# 确定使用的pip命令
-if command -v pip3 &> /dev/null; then
-    PIP_CMD=pip3
+# 创建虚拟环境并激活
+$PYTHON_CMD -m venv .venv
+
+# 检查虚拟环境激活脚本并激活
+if [ -f ".venv/bin/activate" ]; then
+    # Linux/macOS
+    source .venv/bin/activate
+elif [ -f ".venv/Scripts/activate" ]; then
+    # Windows
+    source .venv/Scripts/activate
 else
-    PIP_CMD=pip
+    echo "Cannot find virtual environment activation script, skipping Python tests"
+    exit 0
 fi
 
-# 安装maturin
-$PIP_CMD install maturin
+# 升级pip并安装maturin
+python -m pip install --upgrade pip
+pip install maturin
 
-# 尝试使用maturin build方式
-set +e  # 关闭错误退出，以便我们可以处理错误
-maturin build
-BUILD_RESULT=$?
-set -e  # 重新启用错误退出
-
-if [ $BUILD_RESULT -eq 0 ]; then
-    # 查找并安装wheel文件
-    WHEEL_FILE=$(find target/wheels -name "*.whl" 2>/dev/null | head -n 1)
-    if [ -n "$WHEEL_FILE" ] && [ -f "$WHEEL_FILE" ]; then
-        $PIP_CMD install "$WHEEL_FILE"
-        echo "Successfully installed wheel file"
-    else
-        echo "No wheel file found, trying maturin develop"
-        maturin develop
-    fi
-else
-    echo "maturin build failed, trying maturin develop"
-    # 尝试直接使用maturin develop
-    maturin develop
-fi
+# 构建Python扩展
+maturin develop
 
 # 运行Python测试
-$PYTHON_CMD test_minigu_api.py
+python test_minigu_api.py
 echo "Python API tests completed."
