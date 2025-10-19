@@ -14,6 +14,7 @@ arrow = { workspace = true }
 minigu = { workspace = true }
 minigu-common = { workspace = true }
 pyo3 = { workspace = true, features = ["extension-module", "abi3-py37"] }
+serde_json = "1.0.141"
 
 [build-dependencies]
 pyo3-build-config = "0.24.2"

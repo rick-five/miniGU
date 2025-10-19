@@ -88,7 +88,7 @@ class Path:
 
 
 class MiniGUError(Exception):
-    """miniGU database exception class"""
+    """Base exception class for miniGU database"""
     pass
 
 
@@ -98,7 +98,22 @@ class ConnectionError(MiniGUError):
 
 
 class QueryError(MiniGUError):
+    """Base query execution error"""
+    pass
+
+
+class QuerySyntaxError(QueryError):
+    """Query syntax error"""
+    pass
+
+
+class QueryExecutionError(QueryError):
     """Query execution error"""
+    pass
+
+
+class QueryTimeoutError(QueryError):
+    """Query timeout error"""
     pass
 
 
@@ -109,6 +124,11 @@ class DataError(MiniGUError):
 
 class GraphError(MiniGUError):
     """Graph creation/manipulation error"""
+    pass
+
+
+class TransactionError(MiniGUError):
+    """Transaction error"""
     pass
 
 
@@ -201,11 +221,10 @@ class AsyncMiniGU:
             if HAS_RUST_BINDINGS:
                 self._rust_instance = PyMiniGU()
                 self._rust_instance.init()
-                # Initialize configuration options
-                if not asyncio.iscoroutinefunction(self.set_thread_count):
-                    self.set_thread_count(self.thread_count)
-                    self.set_cache_size(self.cache_size)
-                    self.enable_query_logging(self.enable_logging)
+                # Initialize configuration options synchronously
+                self.set_thread_count(self.thread_count)
+                self.set_cache_size(self.cache_size)
+                self.enable_query_logging(self.enable_logging)
             self.is_connected = True
             print("Database connected")
         except Exception as e:
@@ -223,14 +242,15 @@ class AsyncMiniGU:
             
         Raises:
             MiniGUError: Raised when database is not connected
-            QueryError: Raised when query execution fails
+            QuerySyntaxError: Raised when query has syntax errors
+            QueryExecutionError: Raised when query execution fails
+            QueryTimeoutError: Raised when query times out
         """
         
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-            
             try:
                 result = self._rust_instance.execute(query)
                 
@@ -240,7 +260,14 @@ class AsyncMiniGU:
                     metrics=result.get("metrics", {})
                 )
             except Exception as e:
-                raise QueryError(f"Query execution failed: {str(e)}")
+                # 根据具体的错误类型抛出更精确的异常
+                error_str = str(e).lower()
+                if "syntax" in error_str or "unexpected" in error_str:
+                    raise QuerySyntaxError(f"Query syntax error: {str(e)}")
+                elif "timeout" in error_str:
+                    raise QueryTimeoutError(f"Query timeout: {str(e)}")
+                else:
+                    raise QueryExecutionError(f"Query execution failed: {str(e)}")
         else:
             # When Rust bindings are not available, raise an error directly
             raise RuntimeError("Rust bindings required for database operations")
@@ -315,12 +342,12 @@ class AsyncMiniGU:
             # When Rust bindings are not available, raise an error directly
             raise RuntimeError("Rust bindings required for database operations")
     
-    async def create_graph(self, graph_name: str, schema: Optional[Dict] = None) -> None:
+    async def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
         """
         Create a graph database asynchronously.
         
         Args:
-            graph_name: Graph name
+            name: Graph name
             schema: Graph schema definition (optional)
             
         Raises:
@@ -357,8 +384,6 @@ class AsyncMiniGU:
         Returns:
             Node object
         """
-        
-        await asyncio.sleep(0.01)
         return Node(label, properties)
     
     async def create_edge(self, label: str, src: Union[Node, int], dst: Union[Node, int], 
@@ -375,8 +400,6 @@ class AsyncMiniGU:
         Returns:
             Edge object
         """
-
-        await asyncio.sleep(0.01)
         return Edge(label, src, dst, properties)
     
     async def create_path(self, nodes: List[Node], edges: List[Edge]) -> Path:
@@ -390,12 +413,21 @@ class AsyncMiniGU:
         Returns:
             Path object
         """
-
-        await asyncio.sleep(0.01)
         return Path(nodes, edges)
     
     async def __aenter__(self):
         return self
+    
+    async def close(self) -> None:
+        """
+        Close the database connection asynchronously.
+        """
+        if self.is_connected and HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.close()
+            except:
+                pass
+        self.is_connected = False
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
@@ -463,18 +495,30 @@ class MiniGU:
             
         Raises:
             MiniGUError: Raised when database is not connected
-            QueryError: Raised when query execution fails
+            QuerySyntaxError: Raised when query has syntax errors
+            QueryExecutionError: Raised when query execution fails
+            QueryTimeoutError: Raised when query times out
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             # Execute query using Rust backend
-            result_dict = self._rust_instance.execute(query)
-            schema = result_dict.get("schema", [])
-            data = result_dict.get("data", [])
-            metrics = result_dict.get("metrics", {})
-            return QueryResult(schema, data, metrics)
+            try:
+                result_dict = self._rust_instance.execute(query)
+                schema = result_dict.get("schema", [])
+                data = result_dict.get("data", [])
+                metrics = result_dict.get("metrics", {})
+                return QueryResult(schema, data, metrics)
+            except Exception as e:
+                # 根据具体的错误类型抛出更精确的异常
+                error_str = str(e).lower()
+                if "syntax" in error_str or "unexpected" in error_str:
+                    raise QuerySyntaxError(f"Query syntax error: {str(e)}")
+                elif "timeout" in error_str:
+                    raise QueryTimeoutError(f"Query timeout: {str(e)}")
+                else:
+                    raise QueryExecutionError(f"Query execution failed: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -550,6 +594,96 @@ class MiniGU:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
+    
+    def begin_transaction(self) -> None:
+        """
+        Begin a transaction.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction cannot be started
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'begin_transaction'):
+                    self._rust_instance.begin_transaction()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to begin transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    def commit(self) -> None:
+        """
+        Commit the current transaction.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction cannot be committed
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'commit'):
+                    self._rust_instance.commit()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to commit transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    def rollback(self) -> None:
+        """
+        Rollback the current transaction.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction cannot be rolled back
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'rollback'):
+                    self._rust_instance.rollback()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+
+    def close(self) -> None:
+        """
+        Close the database connection.
+        """
+        if self.is_connected and HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.close()
+            except:
+                pass
+        self.is_connected = False
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
 
 def connect(db_path: Optional[str] = None,
