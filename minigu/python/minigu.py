@@ -216,11 +216,10 @@ class AsyncMiniGU:
             if HAS_RUST_BINDINGS:
                 self._rust_instance = PyMiniGU()
                 self._rust_instance.init()
-                # Initialize configuration options
-                if not asyncio.iscoroutinefunction(self.set_thread_count):
-                    self.set_thread_count(self.thread_count)
-                    self.set_cache_size(self.cache_size)
-                    self.enable_query_logging(self.enable_logging)
+                # Initialize configuration options synchronously
+                self.set_thread_count(self.thread_count)
+                self.set_cache_size(self.cache_size)
+                self.enable_query_logging(self.enable_logging)
             self.is_connected = True
             print("Database connected")
         except Exception as e:
@@ -258,7 +257,7 @@ class AsyncMiniGU:
             except Exception as e:
                 # 根据具体的错误类型抛出更精确的异常
                 error_str = str(e).lower()
-                if "syntax" in error_str:
+                if "syntax" in error_str or "unexpected" in error_str:
                     raise QuerySyntaxError(f"Query syntax error: {str(e)}")
                 elif "timeout" in error_str:
                     raise QueryTimeoutError(f"Query timeout: {str(e)}")
@@ -414,6 +413,17 @@ class AsyncMiniGU:
     async def __aenter__(self):
         return self
     
+    async def close(self) -> None:
+        """
+        Close the database connection asynchronously.
+        """
+        if self.is_connected and HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.close()
+            except:
+                pass
+        self.is_connected = False
+    
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
         return False
@@ -498,7 +508,7 @@ class MiniGU:
             except Exception as e:
                 # 根据具体的错误类型抛出更精确的异常
                 error_str = str(e).lower()
-                if "syntax" in error_str:
+                if "syntax" in error_str or "unexpected" in error_str:
                     raise QuerySyntaxError(f"Query syntax error: {str(e)}")
                 elif "timeout" in error_str:
                     raise QueryTimeoutError(f"Query timeout: {str(e)}")
@@ -579,6 +589,24 @@ class MiniGU:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
+    
+    def close(self) -> None:
+        """
+        Close the database connection.
+        """
+        if self.is_connected and HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.close()
+            except:
+                pass
+        self.is_connected = False
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
 
 def connect(db_path: Optional[str] = None,
