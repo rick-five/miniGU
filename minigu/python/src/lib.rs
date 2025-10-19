@@ -9,6 +9,8 @@ use minigu::session::Session;
 use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList, PyString};
+use std::path::Path;
+use serde_json;
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
@@ -16,6 +18,7 @@ use pyo3::types::{PyBool, PyDict, PyList, PyString};
 pub struct PyMiniGU {
     database: Option<Database>,
     session: Option<Session>,
+    current_graph: Option<String>, // Track current graph name
 }
 
 #[pymethods]
@@ -26,6 +29,7 @@ impl PyMiniGU {
         Ok(PyMiniGU {
             database: None,
             session: None,
+            current_graph: None,
         })
     }
 
@@ -104,13 +108,24 @@ impl PyMiniGU {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
+        // Validate file path
+        let path_obj = Path::new(path);
+        if !path_obj.exists() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                format!("File not found: {}", path)
+            ));
+        }
+
+        // Use current graph or default to "default_graph"
+        let graph_name = self.current_graph.as_ref().map(|s| s.as_str()).unwrap_or("default_graph");
+        
         // Sanitize the path to prevent injection attacks
-        let sanitized_path = path.replace("'", "\\'");
+        let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!(
-            "CALL import('test_graph', '{}', 'manifest.json')",
-            sanitized_path
+            "CALL import('{}', '{}', 'manifest.json')",
+            graph_name, sanitized_path
         );
         match session.query(&query) {
             Ok(_) => {
@@ -124,7 +139,7 @@ impl PyMiniGU {
         }
     }
 
-    /// Load data directly
+    /// Load data directly with batch support
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
         let session = self.session.as_mut().expect("Session not initialized");
@@ -132,17 +147,24 @@ impl PyMiniGU {
         // Convert Python data to Rust data structures
         let list = data
             .downcast::<PyList>()
-            .expect("Expected a list of dictionaries");
+            .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>("Expected a list of dictionaries"))?;
 
         println!("Loading {} records", list.len());
 
-        // Build GQL INSERT statements from the Python data
-        let mut insert_statements = Vec::new();
+        // Use current graph or default to "default_graph"
+        let graph_name = self.current_graph.as_ref().map(|s| s.as_str()).unwrap_or("default_graph");
 
-        for item in list.iter() {
+        // Process data in batches for better performance
+        const BATCH_SIZE: usize = 1000;
+        let mut batch_statements = Vec::new();
+        let mut current_batch = Vec::new();
+
+        for (index, item) in list.iter().enumerate() {
             let dict = item
                 .downcast::<PyDict>()
-                .expect("Expected a list of dictionaries");
+                .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                    format!("Expected a list of dictionaries, but item {} is not a dictionary", index)
+                ))?;
 
             // Extract label and properties
             let mut label = "Node".to_string();
@@ -151,27 +173,46 @@ impl PyMiniGU {
             for (key, value) in dict.iter() {
                 let key_str = key
                     .downcast::<PyString>()
-                    .expect("Dictionary keys must be strings")
+                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                        format!("Dictionary keys must be strings, but key in item {} is not a string", index)
+                    ))?
                     .to_string();
+
+                // Validate key is not empty
+                if key_str.is_empty() {
+                    return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                        format!("Empty key found in item {}", index)
+                    ));
+                }
 
                 let value_str = value
                     .str()
-                    .expect("Dictionary values must be convertible to strings")
+                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                        format!("Dictionary values must be convertible to strings, but value for key '{}' in item {} is not convertible", key_str, index)
+                    ))?
                     .to_string();
 
                 if key_str == "label" {
+                    if value_str.is_empty() {
+                        return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                            format!("Empty label found in item {}", index)
+                        ));
+                    }
                     label = value_str;
                 } else {
                     // Format property value appropriately
-                    // Based on GQL examples, we need to handle different types
-                    // correctly. For now, we'll try to determine if it's a number
-                    // or string
                     if let Ok(int_val) = value_str.parse::<i64>() {
                         properties.push(format!("{}: {}", key_str, int_val));
                     } else if let Ok(float_val) = value_str.parse::<f64>() {
                         properties.push(format!("{}: {}", key_str, float_val));
+                    } else if value_str.eq_ignore_ascii_case("true") {
+                        properties.push(format!("{}: true", key_str));
+                    } else if value_str.eq_ignore_ascii_case("false") {
+                        properties.push(format!("{}: false", key_str));
+                    } else if value_str.eq_ignore_ascii_case("null") {
+                        properties.push(format!("{}: null", key_str));
                     } else {
-                        // It's a string, remove the extra quotes if they exist
+                        // It's a string, remove the extra quotes if they exist and escape single quotes
                         let clean_value = if value_str.starts_with('\'')
                             && value_str.ends_with('\'')
                             && value_str.len() > 1
@@ -180,26 +221,59 @@ impl PyMiniGU {
                         } else {
                             &value_str
                         };
-                        properties.push(format!("{}: '{}'", key_str, clean_value));
+                        // Escape single quotes in string values
+                        let escaped_value = clean_value.replace('\'', "\\'");
+                        properties.push(format!("{}: '{}'", key_str, escaped_value));
                     }
                 }
+            }
+
+            // Validate label is not empty
+            if label.is_empty() {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                    format!("Empty label found in item {}", index)
+                ));
             }
 
             // Create INSERT statement using correct GQL syntax
             if !properties.is_empty() {
                 let props_str = properties.join(", ");
                 // Use (:Label { properties }) syntax according to GQL specification
-                let statement = format!("INSERT (:{} {{ {} }})", label, props_str);
-                insert_statements.push(statement);
+                let statement = format!("INSERT (:{} {{ {} }}) INTO {}", label, props_str, graph_name);
+                current_batch.push(statement);
+            }
+
+            // If batch is full, add it to batch_statements and start a new batch
+            if current_batch.len() >= BATCH_SIZE {
+                batch_statements.push(current_batch);
+                current_batch = Vec::new();
             }
         }
 
-        // Execute all INSERT statements
-        for statement in insert_statements {
-            session
-                .query(&statement)
-                .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
-            println!("Successfully executed: {}", statement);
+        // Add the last batch if it's not empty
+        if !current_batch.is_empty() {
+            batch_statements.push(current_batch);
+        }
+
+        // Execute all batches
+        for (batch_index, batch) in batch_statements.iter().enumerate() {
+            // Create a transaction for this batch
+            let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
+            session.query(&transaction_query)
+                .unwrap_or_else(|_| panic!("Failed to begin transaction for batch {}", batch_index));
+            
+            for statement in batch {
+                session
+                    .query(statement)
+                    .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
+            }
+            
+            // Commit the transaction
+            let commit_query = "COMMIT";
+            session.query(commit_query)
+                .unwrap_or_else(|_| panic!("Failed to commit transaction for batch {}", batch_index));
+            
+            println!("Successfully executed batch {} with {} statements", batch_index, batch.len());
         }
 
         println!("All data loaded successfully");
@@ -213,13 +287,16 @@ impl PyMiniGU {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
+        // Use current graph or default to "default_graph"
+        let graph_name = self.current_graph.as_ref().map(|s| s.as_str()).unwrap_or("default_graph");
+
         // Sanitize the path to prevent injection attacks
-        let sanitized_path = path.replace("'", "\\'");
+        let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
 
         // Execute the export procedure with correct syntax (no semicolon)
         let query = format!(
-            "CALL export('test_graph', '{}', 'manifest.json')",
-            sanitized_path
+            "CALL export('{}', '{}', 'manifest.json')",
+            graph_name, sanitized_path
         );
         match session.query(&query) {
             Ok(_) => {
@@ -240,23 +317,41 @@ impl PyMiniGU {
             PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
         })?;
 
+        // Validate graph name
+        if name.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>("Graph name cannot be empty"));
+        }
+
+        // Sanitize graph name
+        let sanitized_name = name.replace(['\'', '"', ';', '\n', '\r', ' ', '\t'], "_");
+
         // Create the graph using the create_test_graph procedure
-        let query = format!("CALL create_test_graph('{}')", name);
+        let query = format!("CALL create_test_graph('{}')", sanitized_name);
         match session.query(&query) {
             Ok(_) => {
-                println!("Graph '{}' created successfully", name);
+                println!("Graph '{}' created successfully", sanitized_name);
+                self.current_graph = Some(sanitized_name);
 
                 // If schema is provided, we could process it here
                 if let Some(schema_str) = schema {
-                    println!("Schema provided but not yet implemented: {}", schema_str);
                     // In a full implementation, we would parse the schema and add vertex/edge types
+                    // For now, we just log that it was provided
+                    if !schema_str.is_empty() {
+                        // Attempt to parse as JSON to validate it's well-formed
+                        if let Err(_) = serde_json::from_str::<serde_json::Value>(schema_str) {
+                            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                                "Schema must be valid JSON"
+                            ));
+                        }
+                        println!("Schema provided but not yet implemented: {}", schema_str);
+                    }
                 }
 
                 Ok(())
             }
             Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to create graph '{}': {}",
-                name, e
+                sanitized_name, e
             ))),
         }
     }
@@ -265,6 +360,33 @@ impl PyMiniGU {
     fn close(&mut self) -> PyResult<()> {
         self.database = None;
         self.session = None;
+        self.current_graph = None;
+        Ok(())
+    }
+    
+    /// Begin a transaction
+    fn begin_transaction(&mut self) -> PyResult<()> {
+        let session = self.session.as_mut().expect("Session not initialized");
+        
+        // Use current graph or default to "default_graph"
+        let graph_name = self.current_graph.as_ref().map(|s| s.as_str()).unwrap_or("default_graph");
+        
+        let query = format!("BEGIN TRANSACTION INTO {}", graph_name);
+        session.query(&query).expect("Failed to begin transaction");
+        Ok(())
+    }
+    
+    /// Commit current transaction
+    fn commit(&mut self) -> PyResult<()> {
+        let session = self.session.as_mut().expect("Session not initialized");
+        session.query("COMMIT").expect("Failed to commit transaction");
+        Ok(())
+    }
+    
+    /// Rollback current transaction
+    fn rollback(&mut self) -> PyResult<()> {
+        let session = self.session.as_mut().expect("Session not initialized");
+        session.query("ROLLBACK").expect("Failed to rollback transaction");
         Ok(())
     }
 }
