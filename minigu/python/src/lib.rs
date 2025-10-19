@@ -35,10 +35,18 @@ impl PyMiniGU {
     /// Initialize the database
     fn init(&mut self) -> PyResult<()> {
         let config = DatabaseConfig::default();
-        let db = Database::open_in_memory(&config)
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to initialize database: {}", e)))?;
-        let session = db.session()
-            .map_err(|e| PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to create session: {}", e)))?;
+        let db = Database::open_in_memory(&config).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to initialize database: {}",
+                e
+            ))
+        })?;
+        let session = db.session().map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to create session: {}",
+                e
+            ))
+        })?;
         self.database = Some(db);
         self.session = Some(session);
         Ok(())
@@ -336,7 +344,7 @@ impl PyMiniGU {
 
         // Sanitize graph name - replace invalid characters with underscore
         let sanitized_name = graph_name.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
-        
+
         // Validate graph name after sanitization
         if sanitized_name.is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -449,7 +457,7 @@ impl PyMiniGU {
 
         // Sanitize graph name
         let sanitized_name = graph_name.replace(|c: char| !c.is_alphanumeric() && c != '_', "");
-        
+
         // Validate graph name after sanitization
         if sanitized_name.is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -477,7 +485,7 @@ impl PyMiniGU {
     /// Use a graph
     fn use_graph(&mut self, graph_name: &str) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
-        
+
         // Validate graph name
         if graph_name.is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
@@ -487,7 +495,7 @@ impl PyMiniGU {
 
         // Sanitize graph name
         let sanitized_name = graph_name.replace(['\'', '"', ';', '\n', '\r'], "");
-        
+
         // Validate graph name after sanitization
         if sanitized_name.is_empty() {
             return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
