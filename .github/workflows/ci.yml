@@ -139,7 +139,6 @@ jobs:
       run: |
         cd minigu/python
         python -m venv .venv
-        # 激活虚拟环境 (跨平台方式)
         if [ "$RUNNER_OS" == "Windows" ]; then
           source .venv/Scripts/activate
         else
@@ -150,7 +149,6 @@ jobs:
     - name: Build Python extension
       run: |
         cd minigu/python
-        # 激活虚拟环境 (跨平台方式)
         if [ "$RUNNER_OS" == "Windows" ]; then
           source .venv/Scripts/activate
         else
@@ -161,7 +159,6 @@ jobs:
     - name: Run Python tests
       run: |
         cd minigu/python
-        # 激活虚拟环境 (跨平台方式)
         if [ "$RUNNER_OS" == "Windows" ]; then
           source .venv/Scripts/activate
         else
@@ -182,7 +179,6 @@ jobs:
           ls -la .venv/bin
         fi
         echo "Trying to run Python tests..."
-        # 使用set +e允许测试失败但不中断流程
         set +e
         python test_minigu_api.py
         TEST_RESULT=$?
@@ -193,7 +189,6 @@ jobs:
         else
           echo "Python tests completed successfully"
         fi
-        # 即使测试失败也继续执行，不中断CI流程
 
   docs:
     name: Build Docs
