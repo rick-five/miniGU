@@ -127,6 +127,11 @@ class GraphError(MiniGUError):
     pass
 
 
+class TransactionError(MiniGUError):
+    """Transaction error"""
+    pass
+
+
 class QueryResult:
     """
     Query result class
@@ -590,6 +595,78 @@ class MiniGU:
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
+    def begin_transaction(self) -> None:
+        """
+        Begin a transaction.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction cannot be started
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'begin_transaction'):
+                    self._rust_instance.begin_transaction()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to begin transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    def commit(self) -> None:
+        """
+        Commit the current transaction.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction cannot be committed
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'commit'):
+                    self._rust_instance.commit()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to commit transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    def rollback(self) -> None:
+        """
+        Rollback the current transaction.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction cannot be rolled back
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'rollback'):
+                    self._rust_instance.rollback()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+
     def close(self) -> None:
         """
         Close the database connection.
