@@ -56,6 +56,8 @@ smol_str = { version = "0.3.2", default-features = false }
 strum = { version = "0.27.2", features = ["derive"] }
 winnow = { version = "0.7.12", default-features = false, features = ["alloc"] }
 
+parking_lot = "0.12.3"
+
 gql-parser = { path = "minigu/gql/parser", version = "0.1.0", features = [
     "std",
     "serde",
@@ -69,8 +71,6 @@ minigu-execution = { path = "minigu/gql/execution", version = "0.1.0" }
 minigu-planner = { path = "minigu/gql/planner", version = "0.1.0" }
 minigu-storage = { path = "minigu/storage", version = "0.1.0" }
 minigu-transaction = { path = "minigu/transaction", version = "0.1.0" }
-
-diskann = { path = "minigu/storage/diskann-rs/diskann", version = "0.1.0" }
 
 anyhow = "1.0.98"
 approx = "0.5.1"
