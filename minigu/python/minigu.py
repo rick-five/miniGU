@@ -221,10 +221,8 @@ class AsyncMiniGU:
             if HAS_RUST_BINDINGS:
                 self._rust_instance = PyMiniGU()
                 self._rust_instance.init()
-                # Initialize configuration options synchronously
-                self.set_thread_count(self.thread_count)
-                self.set_cache_size(self.cache_size)
-                self.enable_query_logging(self.enable_logging)
+            else:
+                raise ConnectionError("Rust bindings not available")
             self.is_connected = True
             print("Database connected")
         except Exception as e:
@@ -321,25 +319,86 @@ class AsyncMiniGU:
         Save the database to the specified path asynchronously.
         
         Args:
-            path: Save path
+            path: Target file path
             
         Raises:
             MiniGUError: Raised when database is not connected
-            DataError: Raised when save fails
+            IOError: Raised when save operation fails
         """
-
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance:
-    
             try:
-                self._rust_instance.save_to_file(path)
+                self._rust_instance.save(path)
                 print(f"Database saved to {path}")
             except Exception as e:
-                raise DataError(f"Database save failed: {str(e)}")
+                raise IOError(f"Failed to save database: {str(e)}")
         else:
             # When Rust bindings are not available, raise an error directly
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    async def begin_transaction(self) -> None:
+        """
+        Begin a transaction asynchronously.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction operations fail
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.begin_transaction()
+            except AttributeError:
+                print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to begin transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    async def commit(self) -> None:
+        """
+        Commit the current transaction asynchronously.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction operations fail
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.commit()
+            except AttributeError:
+                print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to commit transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    async def rollback(self) -> None:
+        """
+        Rollback the current transaction asynchronously.
+        
+        Raises:
+            MiniGUError: Raised when database is not connected
+            TransactionError: Raised when transaction operations fail
+        """
+        if not self.is_connected:
+            raise MiniGUError("Database not connected")
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.rollback()
+            except AttributeError:
+                print("Transactions not yet implemented in Rust backend")
+            except Exception as e:
+                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
+        else:
             raise RuntimeError("Rust bindings required for database operations")
     
     async def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
@@ -360,17 +419,11 @@ class AsyncMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Convert schema dictionary to JSON string if needed
-                if schema is not None and not isinstance(schema, str):
-                    schema_str = json.dumps(schema)
-                    self._rust_instance.create_graph(graph_name, schema_str)
-                else:
-                    self._rust_instance.create_graph(graph_name, schema)
-                print(f"Graph '{graph_name}' created successfully")
+                self._rust_instance.create_graph(name, json.dumps(schema) if schema else None)
+                print(f"Graph '{name}' created successfully")
             except Exception as e:
-                raise GraphError(f"Failed to create graph: {str(e)}")
+                raise GraphError(f"Graph creation failed: {str(e)}")
         else:
-            # When Rust bindings are not available, raise an error directly
             raise RuntimeError("Rust bindings required for database operations")
     
     async def create_node(self, label: str, properties: Optional[Dict[str, Any]] = None) -> Node:
