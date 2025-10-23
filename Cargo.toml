@@ -58,6 +58,9 @@ winnow = { version = "0.7.12", default-features = false, features = ["alloc"] }
 
 parking_lot = "0.12.3"
 
+diskann = { path = "minigu/storage/diskann-rs/diskann", version = "0.1.0" }
+vector = { path = "minigu/storage/diskann-rs/vector", version = "0.1.0" }
+
 gql-parser = { path = "minigu/gql/parser", version = "0.1.0", features = [
     "std",
     "serde",
