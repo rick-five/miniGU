@@ -10,54 +10,40 @@ from pathlib import Path
 import json
 import asyncio
 
-
-# Try to import Rust bindings
-try:
-    from . import minigu_python
-    from .minigu_python import PyMiniGU
-    HAS_RUST_BINDINGS = True
-except (ImportError, ModuleNotFoundError):
-    try:
-        # Try alternative import path
-        import minigu_python
-        from minigu_python import PyMiniGU
-        HAS_RUST_BINDINGS = True
-    except (ImportError, ModuleNotFoundError):
-        # No longer provide simulated implementation warning, directly raise exception
-        HAS_RUST_BINDINGS = False
-        raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
+# Import from package __init__.py
+from . import HAS_RUST_BINDINGS, PyMiniGU
 
 
-class Node:
-    """Graph node representation"""
+class Vertex:
+    """Graph vertex representation"""
     
     def __init__(self, label: str, properties: Optional[Dict[str, Any]] = None):
         """
-        Initialize a node
+        Initialize a vertex
         
         Args:
-            label: Node label
-            properties: Node properties as key-value pairs
+            label: Vertex label
+            properties: Vertex properties as key-value pairs
         """
         self.label = label
         self.properties = properties or {}
     
     def __repr__(self) -> str:
-        return f"Node(label='{self.label}', properties={self.properties})"
+        return f"Vertex(label='{self.label}', properties={self.properties})"
 
 
 class Edge:
     """Graph edge representation"""
     
-    def __init__(self, label: str, src: Union[Node, int], dst: Union[Node, int], 
+    def __init__(self, label: str, src: Union[Vertex, int], dst: Union[Vertex, int], 
                  properties: Optional[Dict[str, Any]] = None):
         """
         Initialize an edge
         
         Args:
             label: Edge label
-            src: Source node or node ID
-            dst: Destination node or node ID
+            src: Source vertex or vertex ID
+            dst: Destination vertex or vertex ID
             properties: Edge properties as key-value pairs
         """
         self.label = label
@@ -72,12 +58,12 @@ class Edge:
 class Path:
     """Graph path representation"""
     
-    def __init__(self, nodes: List[Node], edges: List[Edge]):
+    def __init__(self, nodes: List[Vertex], edges: List[Edge]):
         """
         Initialize a path
         
         Args:
-            nodes: List of nodes in the path
+            nodes: List of vertices in the path
             edges: List of edges in the path
         """
         self.nodes = nodes
@@ -258,7 +244,7 @@ class AsyncMiniGU:
                     metrics=result.get("metrics", {})
                 )
             except Exception as e:
-                # 根据具体的错误类型抛出更精确的异常
+                # Throw more precise exceptions based on specific error types
                 error_str = str(e).lower()
                 if "syntax" in error_str or "unexpected" in error_str:
                     raise QuerySyntaxError(f"Query syntax error: {str(e)}")
@@ -267,9 +253,8 @@ class AsyncMiniGU:
                 else:
                     raise QueryExecutionError(f"Query execution failed: {str(e)}")
         else:
-            # When Rust bindings are not available, raise an error directly
             raise RuntimeError("Rust bindings required for database operations")
-    
+
     async def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
         Load data into the database asynchronously.
@@ -426,28 +411,28 @@ class AsyncMiniGU:
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
-    async def create_node(self, label: str, properties: Optional[Dict[str, Any]] = None) -> Node:
+    async def create_node(self, label: str, properties: Optional[Dict[str, Any]] = None) -> Vertex:
         """
-        Create a node object asynchronously.
+        Create a vertex object asynchronously.
         
         Args:
-            label: Node label
-            properties: Node properties
+            label: Vertex label
+            properties: Vertex properties
             
         Returns:
-            Node object
+            Vertex object
         """
-        return Node(label, properties)
-    
-    async def create_edge(self, label: str, src: Union[Node, int], dst: Union[Node, int], 
+        return Vertex(label, properties)
+
+    async def create_edge(self, label: str, src: Union[Vertex, int], dst: Union[Vertex, int], 
                           properties: Optional[Dict[str, Any]] = None) -> Edge:
         """
         Create an edge object asynchronously.
         
         Args:
             label: Edge label
-            src: Source node or node ID
-            dst: Destination node or node ID
+            src: Source vertex or vertex ID
+            dst: Destination vertex or vertex ID
             properties: Edge properties
             
         Returns:
@@ -455,12 +440,12 @@ class AsyncMiniGU:
         """
         return Edge(label, src, dst, properties)
     
-    async def create_path(self, nodes: List[Node], edges: List[Edge]) -> Path:
+    async def create_path(self, nodes: List[Vertex], edges: List[Edge]) -> Path:
         """
         Create a path object asynchronously.
         
         Args:
-            nodes: List of nodes
+            nodes: List of vertices
             edges: List of edges
             
         Returns:
@@ -564,7 +549,7 @@ class MiniGU:
                 metrics = result_dict.get("metrics", {})
                 return QueryResult(schema, data, metrics)
             except Exception as e:
-                # 根据具体的错误类型抛出更精确的异常
+                # Throw more precise exceptions based on specific error types
                 error_str = str(e).lower()
                 if "syntax" in error_str or "unexpected" in error_str:
                     raise QuerySyntaxError(f"Query syntax error: {str(e)}")
