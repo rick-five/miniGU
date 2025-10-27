@@ -1,5 +1,5 @@
-use std::{env, fs};
 use std::path::Path;
+use std::{env, fs};
 
 fn main() {
     // Use PyO3's helper function to set the correct linker arguments for extension modules
