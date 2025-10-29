@@ -591,7 +591,12 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
     Python::with_gil(|py| match array.data_type() {
         DataType::Int32 => {
-            let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
+            let arr = array.as_any().downcast_ref::<Int32Array>().ok_or_else(|| {
+                PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                    "Failed to downcast array to Int32Array for index {}",
+                    index
+                ))
+            })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
@@ -599,7 +604,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
             }
         }
         DataType::Utf8 => {
-            let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
+            let arr = array
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Failed to downcast array to StringArray for index {}",
+                        index
+                    ))
+                })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
@@ -607,7 +620,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
             }
         }
         DataType::Boolean => {
-            let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
+            let arr = array
+                .as_any()
+                .downcast_ref::<BooleanArray>()
+                .ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Failed to downcast array to BooleanArray for index {}",
+                        index
+                    ))
+                })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
@@ -620,7 +641,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
             }
         }
         DataType::Float64 => {
-            let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
+            let arr = array
+                .as_any()
+                .downcast_ref::<Float64Array>()
+                .ok_or_else(|| {
+                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Failed to downcast array to Float64Array for index {}",
+                        index
+                    ))
+                })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
