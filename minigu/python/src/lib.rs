@@ -549,7 +549,14 @@ impl PyMiniGU {
 
     /// Begin a transaction
     fn begin_transaction(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized",
+            ));
+        }
+
+        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
 
         let query = "START TRANSACTION";
         session.query(query).map_err(|e| {
