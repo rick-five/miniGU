@@ -48,7 +48,7 @@ impl PyMiniGU {
                 e
             ))
         })?;
-        
+
         // Debug information
         println!("Session initialized");
         // Note: We can't access the private context field of Session here
@@ -68,10 +68,7 @@ impl PyMiniGU {
 
         // Execute the query
         let query_result = session.query(query_str).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Query execution failed: {}",
-                e
-            ))
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Query execution failed: {}", e))
         })?;
 
         // Convert QueryResult to Python dict
