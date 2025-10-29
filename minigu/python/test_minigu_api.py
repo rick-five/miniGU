@@ -20,6 +20,17 @@ import asyncio
 # Add the python module to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
 
+# Ensure the virtual environment paths are properly set
+venv_path = os.path.join(os.path.dirname(__file__), '.venv')
+if os.path.exists(venv_path):
+    # Add site-packages to the path
+    if sys.platform == "win32":
+        site_packages = os.path.join(venv_path, 'Lib', 'site-packages')
+    else:
+        site_packages = os.path.join(venv_path, 'lib', 'python{}.{}'.format(sys.version_info.major, sys.version_info.minor), 'site-packages')
+    if site_packages not in sys.path:
+        sys.path.insert(0, site_packages)
+
 import minigu
 
 

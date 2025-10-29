@@ -30,3 +30,6 @@ Repository = "https://github.com/TuGraph-family/miniGU"
 features = ["pyo3/extension-module"]
 module-name = "minigu.minigu_python"
 python-source = "."
+
+[tool.maturin.module]
+name = "minigu.minigu_python"

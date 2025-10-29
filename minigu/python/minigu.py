@@ -9,28 +9,32 @@ from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json
 import asyncio
+import os
 
 # Try to import from the installed package first
 try:
-    from minigu_python import PyMiniGU
+    from minigu.minigu_python import PyMiniGU
     HAS_RUST_BINDINGS = True
 except ImportError:
-    # Fallback when running directly or bindings not available
+    # Try direct import
     try:
-        import os
-        import sys
-        # Add the target directory to the path so we can import the Rust module
-        target_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'target', 'debug')
-        if target_dir not in sys.path:
-            sys.path.insert(0, target_dir)
-        
         from minigu_python import PyMiniGU
         HAS_RUST_BINDINGS = True
-    except (ImportError, ModuleNotFoundError):
-        HAS_RUST_BINDINGS = False
-        PyMiniGU = None
-        # Re-raise the exception to indicate that Rust bindings are required
-        raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
+    except ImportError:
+        # Fallback when running directly or bindings not available
+        try:
+            # Add the target directory to the path so we can import the Rust module
+            target_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'target', 'debug')
+            if target_dir not in sys.path:
+                sys.path.insert(0, target_dir)
+            
+            from minigu_python import PyMiniGU
+            HAS_RUST_BINDINGS = True
+        except (ImportError, ModuleNotFoundError):
+            HAS_RUST_BINDINGS = False
+            PyMiniGU = None
+            # Re-raise the exception to indicate that Rust bindings are required
+            raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
 class Vertex:
