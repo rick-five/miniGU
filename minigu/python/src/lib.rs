@@ -280,7 +280,7 @@ impl PyMiniGU {
         // Execute all batches
         for (batch_index, batch) in batch_statements.iter().enumerate() {
             // Create a transaction for this batch
-            let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
+            let transaction_query = "START TRANSACTION";
             session.query(&transaction_query).unwrap_or_else(|_| {
                 panic!("Failed to begin transaction for batch {}", batch_index)
             });
@@ -514,29 +514,37 @@ impl PyMiniGU {
     fn begin_transaction(&mut self) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
 
-        // Use current graph or default to "default_graph"
-        let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
-
-        let query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-        session.query(&query).expect("Failed to begin transaction");
+        let query = "START TRANSACTION";
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to begin transaction: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
-        session
-            .query("COMMIT")
-            .expect("Failed to commit transaction");
+        session.query("COMMIT").map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to commit transaction: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
-        session
-            .query("ROLLBACK")
-            .expect("Failed to rollback transaction");
+        session.query("ROLLBACK").map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to rollback transaction: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 }
