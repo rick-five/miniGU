@@ -187,14 +187,14 @@ class TestMiniGUAPI(unittest.TestCase):
     def test_data_structures(self):
         """Test data structure classes."""
         # Test Node creation
-        node = minigu.Node("Person", {"name": "Alice", "age": 30})
+        node = minigu.Vertex("Person", {"name": "Alice", "age": 30})
         self.assertEqual(node.label, "Person")
         self.assertEqual(node.properties["name"], "Alice")
         self.assertEqual(node.properties["age"], 30)
         
         # Test Edge creation
-        node1 = minigu.Node("Person", {"name": "Alice"})
-        node2 = minigu.Node("Person", {"name": "Bob"})
+        node1 = minigu.Vertex("Person", {"name": "Alice"})
+        node2 = minigu.Vertex("Person", {"name": "Bob"})
         edge = minigu.Edge("FRIEND", node1, node2, {"since": 2020})
         self.assertEqual(edge.label, "FRIEND")
         self.assertEqual(edge.src, node1)
