@@ -53,28 +53,36 @@ jobs:
   clippy:
     name: Clippy Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - run: cargo clippy --tests --features ${{ env.DEFAULT_FEATURES }} --no-deps
+    - run: |
+        cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   machete:
-    name: Machete Check
+    name: Unused Dependencies Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: bnjbvr/cargo-machete@main
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-machete@0.7.0
+    - run: cargo machete
 
   deny:
-    name: Deny Check
+    name: Dependency Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - uses: actions/checkout@v4
-    - uses: EmbarkStudios/cargo-deny-action@v2
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-deny@0.16.3
+    - run: cargo deny check
 
   build:
     needs: [ typos, toml, fmt, clippy, machete, deny ]
@@ -102,22 +110,26 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - run: cargo build -p gql-parser --target aarch64-unknown-none --no-default-features
 
-  test:
+  unit-test:
+    name: Unit Tests
     needs: [ typos, toml, fmt, clippy, machete, deny ]
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-    name: Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-nextest@0.9.88
     - uses: Swatinem/rust-cache@v2
-    - run: cargo nextest run --features ${{ env.DEFAULT_FEATURES }}
+    - run: cargo test --features ${{ env.DEFAULT_FEATURES }}
+
+  doc-test:
+    name: Documentation Tests
+    needs: [ typos, toml, fmt, clippy, machete, deny ]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - uses: Swatinem/rust-cache@v2
     - run: cargo test --features ${{ env.DEFAULT_FEATURES }} --doc
 
   python-test:
@@ -154,7 +166,6 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Building Python extension..."
         maturin develop
     - name: Run Python tests
       run: |
@@ -164,8 +175,27 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Running Python tests..."
         python test_minigu_api.py
+    - name: Run simple debug test on Mac
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        python simple_debug_test.py
+    - name: Run Rust debug test on Mac
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        python rust_debug_test.py
 
   docs:
     name: Build Docs
