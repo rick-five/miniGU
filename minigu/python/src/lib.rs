@@ -281,7 +281,7 @@ impl PyMiniGU {
         for (batch_index, batch) in batch_statements.iter().enumerate() {
             // Create a transaction for this batch
             let transaction_query = "START TRANSACTION";
-            session.query(&transaction_query).unwrap_or_else(|_| {
+            session.query(transaction_query).unwrap_or_else(|_| {
                 panic!("Failed to begin transaction for batch {}", batch_index)
             });
 
@@ -515,7 +515,7 @@ impl PyMiniGU {
         let session = self.session.as_mut().expect("Session not initialized");
 
         let query = "START TRANSACTION";
-        session.query(&query).map_err(|e| {
+        session.query(query).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to begin transaction: {}",
                 e
