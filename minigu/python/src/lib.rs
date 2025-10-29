@@ -557,26 +557,42 @@ impl PyMiniGU {
 
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
-        session.query("COMMIT").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to commit transaction: {}",
-                e
-            ))
-        })?;
-        Ok(())
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        });
+
+        match session {
+            Ok(sess) => {
+                sess.query("COMMIT").map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                        "Failed to commit transaction: {}",
+                        e
+                    ))
+                })?;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
-        session.query("ROLLBACK").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to rollback transaction: {}",
-                e
-            ))
-        })?;
-        Ok(())
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        });
+
+        match session {
+            Ok(sess) => {
+                sess.query("ROLLBACK").map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                        "Failed to rollback transaction: {}",
+                        e
+                    ))
+                })?;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
