@@ -16,11 +16,17 @@ try:
 except ImportError:
     # Fallback when running directly
     try:
-        from minigu_python import PyMiniGU
+        from .minigu_python import PyMiniGU
         HAS_RUST_BINDINGS = True
     except (ImportError, ModuleNotFoundError):
-        HAS_RUST_BINDINGS = False
-        PyMiniGU = None
+        try:
+            # Try importing from minigu_python package directly
+            import minigu_python
+            PyMiniGU = minigu_python.PyMiniGU
+            HAS_RUST_BINDINGS = True
+        except (ImportError, ModuleNotFoundError):
+            HAS_RUST_BINDINGS = False
+            PyMiniGU = None
 
 
 class Vertex:
