@@ -12,7 +12,6 @@ name = "minigu_python"
 [dependencies]
 arrow = { workspace = true }
 minigu = { workspace = true }
-minigu-common = { workspace = true }
 pyo3 = { workspace = true, features = ["extension-module", "abi3-py37"] }
 
 [build-dependencies]
