@@ -10,17 +10,27 @@ from pathlib import Path
 import json
 import asyncio
 
-# Import from package __init__.py with fallback for direct execution
+# Try to import from the installed package first
 try:
-    from . import HAS_RUST_BINDINGS, PyMiniGU
+    from minigu_python import PyMiniGU
+    HAS_RUST_BINDINGS = True
 except ImportError:
-    # Fallback when running directly
+    # Fallback when running directly or bindings not available
     try:
+        import os
+        import sys
+        # Add the target directory to the path so we can import the Rust module
+        target_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'target', 'debug')
+        if target_dir not in sys.path:
+            sys.path.insert(0, target_dir)
+        
         from minigu_python import PyMiniGU
         HAS_RUST_BINDINGS = True
     except (ImportError, ModuleNotFoundError):
         HAS_RUST_BINDINGS = False
         PyMiniGU = None
+        # Re-raise the exception to indicate that Rust bindings are required
+        raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
 class Vertex:
@@ -343,13 +353,17 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
+        if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
                 self._rust_instance.begin_transaction()
             except AttributeError:
                 print("Transactions not yet implemented in Rust backend")
             except Exception as e:
-                raise TransactionError(f"Failed to begin transaction: {str(e)}")
+                # Check if it's a "not yet implemented" error
+                if "not yet implemented" in str(e):
+                    print("Transactions not yet implemented in Rust backend")
+                else:
+                    raise TransactionError(f"Failed to begin transaction: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -364,13 +378,17 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
+        if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
                 self._rust_instance.commit()
             except AttributeError:
                 print("Transactions not yet implemented in Rust backend")
             except Exception as e:
-                raise TransactionError(f"Failed to commit transaction: {str(e)}")
+                # Check if it's a "not yet implemented" error
+                if "not yet implemented" in str(e):
+                    print("Transactions not yet implemented in Rust backend")
+                else:
+                    raise TransactionError(f"Failed to commit transaction: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -385,19 +403,23 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
+        if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
                 self._rust_instance.rollback()
             except AttributeError:
                 print("Transactions not yet implemented in Rust backend")
             except Exception as e:
-                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
+                # Check if it's a "not yet implemented" error
+                if "not yet implemented" in str(e):
+                    print("Transactions not yet implemented in Rust backend")
+                else:
+                    raise TransactionError(f"Failed to rollback transaction: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
-    async def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
+    async def create_graph(self, name: str, schema: Optional[Dict[str, Dict[str, str]]] = None) -> None:
         """
-        Create a graph database asynchronously.
+        Create a new graph asynchronously.
         
         Args:
             name: Graph name
@@ -413,7 +435,8 @@ class AsyncMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                self._rust_instance.create_graph(name, json.dumps(schema) if schema else None)
+                # Rust backend only accepts graph name, ignoring schema for now
+                self._rust_instance.create_graph(name)
                 print(f"Graph '{name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
@@ -620,11 +643,11 @@ class MiniGU:
     
     def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
         """
-        Create a graph database
+        Create a new graph.
         
         Args:
             name: Graph name
-            schema: Graph schema definition (optional)
+            schema: Graph schema definition (optional, currently ignored)
             
         Raises:
             MiniGUError: Raised when database is not connected
@@ -635,7 +658,8 @@ class MiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                self._rust_instance.create_graph(name, json.dumps(schema) if schema else None)
+                # Rust backend only accepts graph name, ignoring schema for now
+                self._rust_instance.create_graph(name)
                 print(f"Graph '{name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
@@ -662,7 +686,11 @@ class MiniGU:
                     # For now, just print a message since the method doesn't exist in the Rust code yet
                     print("Transactions not yet implemented in Rust backend")
             except Exception as e:
-                raise TransactionError(f"Failed to begin transaction: {str(e)}")
+                # Check if it's a "not yet implemented" error
+                if "not yet implemented" in str(e):
+                    print("Transactions not yet implemented in Rust backend")
+                else:
+                    raise TransactionError(f"Failed to begin transaction: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -677,7 +705,7 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
+        if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
                 # Check if the method exists before calling it
                 if hasattr(self._rust_instance, 'commit'):
@@ -686,7 +714,11 @@ class MiniGU:
                     # For now, just print a message since the method doesn't exist in the Rust code yet
                     print("Transactions not yet implemented in Rust backend")
             except Exception as e:
-                raise TransactionError(f"Failed to commit transaction: {str(e)}")
+                # Check if it's a "not yet implemented" error
+                if "not yet implemented" in str(e):
+                    print("Transactions not yet implemented in Rust backend")
+                else:
+                    raise TransactionError(f"Failed to commit transaction: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -701,7 +733,7 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
+        if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
                 # Check if the method exists before calling it
                 if hasattr(self._rust_instance, 'rollback'):
