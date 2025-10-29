@@ -281,21 +281,30 @@ impl PyMiniGU {
         for (batch_index, batch) in batch_statements.iter().enumerate() {
             // Create a transaction for this batch
             let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-            session.query(&transaction_query).unwrap_or_else(|_| {
-                panic!("Failed to begin transaction for batch {}", batch_index)
-            });
+            session.query(&transaction_query).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to begin transaction for batch {}: {}",
+                    batch_index, e
+                ))
+            })?;
 
             for statement in batch {
-                session
-                    .query(statement)
-                    .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
+                session.query(statement).map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                        "Failed to execute statement '{}': {}",
+                        statement, e
+                    ))
+                })?;
             }
 
             // Commit the transaction
             let commit_query = "COMMIT";
-            session.query(commit_query).unwrap_or_else(|_| {
-                panic!("Failed to commit transaction for batch {}", batch_index)
-            });
+            session.query(commit_query).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to commit transaction for batch {}: {}",
+                    batch_index, e
+                ))
+            })?;
 
             println!(
                 "Successfully executed batch {} with {} statements",
@@ -333,7 +342,7 @@ impl PyMiniGU {
     }
 
     /// Create a new graph
-    fn create_graph(&mut self, graph_name: &str) -> PyResult<()> {
+    fn create_graph(&mut self, graph_name: &str, schema: Option<&str>) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
 
         // Validate graph name
@@ -354,7 +363,14 @@ impl PyMiniGU {
         }
 
         // Create the graph using the create_test_graph procedure
-        let query = format!("CALL create_test_graph('{}')", sanitized_name);
+        let query = if let Some(_schema_str) = schema {
+            // If schema is provided, we might want to use it in the future
+            // For now, we'll just ignore it and use the same procedure
+            println!("Schema provided but not yet implemented: {}", _schema_str);
+            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
+        } else {
+            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
+        };
         match session.query(&query) {
             Ok(_) => {
                 println!("Graph '{}' created successfully", sanitized_name);
@@ -517,26 +533,38 @@ impl PyMiniGU {
         // Use current graph or default to "default_graph"
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
+        // Use correct syntax for beginning transaction
         let query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-        session.query(&query).expect("Failed to begin transaction");
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to begin transaction: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
-        session
-            .query("COMMIT")
-            .expect("Failed to commit transaction");
+        session.query("COMMIT").map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to commit transaction: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
-        session
-            .query("ROLLBACK")
-            .expect("Failed to rollback transaction");
+        session.query("ROLLBACK").map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to rollback transaction: {}",
+                e
+            ))
+        })?;
         Ok(())
     }
 }
