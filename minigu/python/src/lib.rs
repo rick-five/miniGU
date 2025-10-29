@@ -601,7 +601,7 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
         result.push(row_vec);
     }
-    
+
     Ok(result)
 }
 
