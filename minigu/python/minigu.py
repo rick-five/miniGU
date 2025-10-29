@@ -419,7 +419,11 @@ class AsyncMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                self._rust_instance.create_graph(name, json.dumps(schema) if schema else None)
+                # For now, we ignore the schema parameter as the create_test_graph 
+                # procedure doesn't support it
+                if schema is not None:
+                    print(f"Schema provided but not yet implemented: {schema}")
+                self._rust_instance.create_graph(name)
                 print(f"Graph '{name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
@@ -641,7 +645,11 @@ class MiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                self._rust_instance.create_graph(name, json.dumps(schema) if schema else None)
+                # For now, we ignore the schema parameter as the create_test_graph 
+                # procedure doesn't support it
+                if schema is not None:
+                    print(f"Schema provided but not yet implemented: {schema}")
+                self._rust_instance.create_graph(name)
                 print(f"Graph '{name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
