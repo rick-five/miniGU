@@ -348,19 +348,23 @@ class AsyncMiniGU:
         
         Raises:
             MiniGUError: Raised when database is not connected
-            TransactionError: Raised when transaction operations fail
+            TransactionError: Raised when transaction cannot be started
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance is not None:
+        if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                self._rust_instance.begin_transaction()
-            except AttributeError:
-                print("Transactions not yet implemented in Rust backend")
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'begin_transaction'):
+                    self._rust_instance.begin_transaction()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
             except Exception as e:
                 # Check if it's a "not yet implemented" error
-                if "not yet implemented" in str(e):
+                error_str = str(e).lower()
+                if "not yet implemented" in error_str or "not implemented" in error_str:
                     print("Transactions not yet implemented in Rust backend")
                 else:
                     raise TransactionError(f"Failed to begin transaction: {str(e)}")
@@ -373,19 +377,23 @@ class AsyncMiniGU:
         
         Raises:
             MiniGUError: Raised when database is not connected
-            TransactionError: Raised when transaction operations fail
+            TransactionError: Raised when transaction cannot be committed
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
-                self._rust_instance.commit()
-            except AttributeError:
-                print("Transactions not yet implemented in Rust backend")
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'commit'):
+                    self._rust_instance.commit()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
             except Exception as e:
                 # Check if it's a "not yet implemented" error
-                if "not yet implemented" in str(e):
+                error_str = str(e).lower()
+                if "not yet implemented" in error_str or "not implemented" in error_str:
                     print("Transactions not yet implemented in Rust backend")
                 else:
                     raise TransactionError(f"Failed to commit transaction: {str(e)}")
@@ -398,19 +406,23 @@ class AsyncMiniGU:
         
         Raises:
             MiniGUError: Raised when database is not connected
-            TransactionError: Raised when transaction operations fail
+            TransactionError: Raised when transaction cannot be rolled back
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
         if HAS_RUST_BINDINGS and self._rust_instance is not None:
             try:
-                self._rust_instance.rollback()
-            except AttributeError:
-                print("Transactions not yet implemented in Rust backend")
+                # Check if the method exists before calling it
+                if hasattr(self._rust_instance, 'rollback'):
+                    self._rust_instance.rollback()
+                else:
+                    # For now, just print a message since the method doesn't exist in the Rust code yet
+                    print("Transactions not yet implemented in Rust backend")
             except Exception as e:
                 # Check if it's a "not yet implemented" error
-                if "not yet implemented" in str(e):
+                error_str = str(e).lower()
+                if "not yet implemented" in error_str or "not implemented" in error_str:
                     print("Transactions not yet implemented in Rust backend")
                 else:
                     raise TransactionError(f"Failed to rollback transaction: {str(e)}")
@@ -677,22 +689,26 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance:
-            try:
-                # Check if the method exists before calling it
-                if hasattr(self._rust_instance, 'begin_transaction'):
-                    self._rust_instance.begin_transaction()
-                else:
-                    # For now, just print a message since the method doesn't exist in the Rust code yet
-                    print("Transactions not yet implemented in Rust backend")
-            except Exception as e:
-                # Check if it's a "not yet implemented" error
-                if "not yet implemented" in str(e):
-                    print("Transactions not yet implemented in Rust backend")
-                else:
-                    raise TransactionError(f"Failed to begin transaction: {str(e)}")
-        else:
+        if not HAS_RUST_BINDINGS:
             raise RuntimeError("Rust bindings required for database operations")
+            
+        if self._rust_instance is None:
+            raise ConnectionError("Database instance is not properly initialized")
+            
+        try:
+            # Check if the method exists before calling it
+            if hasattr(self._rust_instance, 'begin_transaction'):
+                self._rust_instance.begin_transaction()
+            else:
+                # For now, just print a message since the method doesn't exist in the Rust code yet
+                print("Transactions not yet implemented in Rust backend")
+        except Exception as e:
+            # Check if it's a "not yet implemented" error
+            error_str = str(e).lower()
+            if "not yet implemented" in error_str or "not implemented" in error_str:
+                print("Transactions not yet implemented in Rust backend")
+            else:
+                raise TransactionError(f"Failed to begin transaction: {str(e)}")
     
     def commit(self) -> None:
         """
@@ -705,22 +721,26 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance is not None:
-            try:
-                # Check if the method exists before calling it
-                if hasattr(self._rust_instance, 'commit'):
-                    self._rust_instance.commit()
-                else:
-                    # For now, just print a message since the method doesn't exist in the Rust code yet
-                    print("Transactions not yet implemented in Rust backend")
-            except Exception as e:
-                # Check if it's a "not yet implemented" error
-                if "not yet implemented" in str(e):
-                    print("Transactions not yet implemented in Rust backend")
-                else:
-                    raise TransactionError(f"Failed to commit transaction: {str(e)}")
-        else:
+        if not HAS_RUST_BINDINGS:
             raise RuntimeError("Rust bindings required for database operations")
+            
+        if self._rust_instance is None:
+            raise ConnectionError("Database instance is not properly initialized")
+            
+        try:
+            # Check if the method exists before calling it
+            if hasattr(self._rust_instance, 'commit'):
+                self._rust_instance.commit()
+            else:
+                # For now, just print a message since the method doesn't exist in the Rust code yet
+                print("Transactions not yet implemented in Rust backend")
+        except Exception as e:
+            # Check if it's a "not yet implemented" error
+            error_str = str(e).lower()
+            if "not yet implemented" in error_str or "not implemented" in error_str:
+                print("Transactions not yet implemented in Rust backend")
+            else:
+                raise TransactionError(f"Failed to commit transaction: {str(e)}")
     
     def rollback(self) -> None:
         """
@@ -733,18 +753,26 @@ class MiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        if HAS_RUST_BINDINGS and self._rust_instance is not None:
-            try:
-                # Check if the method exists before calling it
-                if hasattr(self._rust_instance, 'rollback'):
-                    self._rust_instance.rollback()
-                else:
-                    # For now, just print a message since the method doesn't exist in the Rust code yet
-                    print("Transactions not yet implemented in Rust backend")
-            except Exception as e:
-                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
-        else:
+        if not HAS_RUST_BINDINGS:
             raise RuntimeError("Rust bindings required for database operations")
+            
+        if self._rust_instance is None:
+            raise ConnectionError("Database instance is not properly initialized")
+            
+        try:
+            # Check if the method exists before calling it
+            if hasattr(self._rust_instance, 'rollback'):
+                self._rust_instance.rollback()
+            else:
+                # For now, just print a message since the method doesn't exist in the Rust code yet
+                print("Transactions not yet implemented in Rust backend")
+        except Exception as e:
+            # Check if it's a "not yet implemented" error
+            error_str = str(e).lower()
+            if "not yet implemented" in error_str or "not implemented" in error_str:
+                print("Transactions not yet implemented in Rust backend")
+            else:
+                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
 
     def close(self) -> None:
         """
