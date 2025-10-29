@@ -50,6 +50,7 @@ impl PyMiniGU {
         })?;
         self.database = Some(db);
         self.session = Some(session);
+        self.current_graph = None;
         Ok(())
     }
 
@@ -115,40 +116,17 @@ impl PyMiniGU {
         // Convert metrics
         let metrics = query_result.metrics();
         let metrics_dict = PyDict::new(py);
-        metrics_dict
-            .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)
-            .map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to set parsing_time_ms: {}",
-                    e
-                ))
-            })?;
-        metrics_dict
-            .set_item(
-                "planning_time_ms",
-                metrics.planning_time().as_millis() as f64,
-            )
-            .map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to set planning_time_ms: {}",
-                    e
-                ))
-            })?;
-        metrics_dict
-            .set_item(
-                "execution_time_ms",
-                metrics.execution_time().as_millis() as f64,
-            )
-            .map_err(|e| {
-                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to set execution_time_ms: {}",
-                    e
-                ))
-            })?;
+        metrics_dict.set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
+        metrics_dict.set_item(
+            "planning_time_ms",
+            metrics.planning_time().as_millis() as f64,
+        )?;
+        metrics_dict.set_item(
+            "execution_time_ms",
+            metrics.execution_time().as_millis() as f64,
+        )?;
 
-        dict.set_item("metrics", metrics_dict).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to set metrics: {}", e))
-        })?;
+        dict.set_item("metrics", metrics_dict)?;
 
         Ok(dict.into())
     }
