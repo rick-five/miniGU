@@ -56,10 +56,14 @@ impl PyMiniGU {
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Execute the query
-        let query_result = session.query(query_str).expect("Query execution failed");
+        let query_result = session.query(query_str).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Query execution failed: {}", e))
+        })?;
 
         // Convert QueryResult to Python dict
         let dict = PyDict::new(py);
@@ -281,21 +285,30 @@ impl PyMiniGU {
         for (batch_index, batch) in batch_statements.iter().enumerate() {
             // Create a transaction for this batch
             let transaction_query = "START TRANSACTION";
-            session.query(transaction_query).unwrap_or_else(|_| {
-                panic!("Failed to begin transaction for batch {}", batch_index)
-            });
+            session.query(transaction_query).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to begin transaction for batch {}: {}",
+                    batch_index, e
+                ))
+            })?;
 
             for statement in batch {
-                session
-                    .query(statement)
-                    .unwrap_or_else(|_| panic!("Failed to execute statement '{}'", statement));
+                session.query(statement).map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                        "Failed to execute statement '{}': {}",
+                        statement, e
+                    ))
+                })?;
             }
 
             // Commit the transaction
             let commit_query = "COMMIT";
-            session.query(commit_query).unwrap_or_else(|_| {
-                panic!("Failed to commit transaction for batch {}", batch_index)
-            });
+            session.query(commit_query).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to commit transaction for batch {}: {}",
+                    batch_index, e
+                ))
+            })?;
 
             println!(
                 "Successfully executed batch {} with {} statements",
@@ -326,7 +339,9 @@ impl PyMiniGU {
             "CALL export('{}', '{}', 'manifest.json')",
             graph_name, sanitized_path
         );
-        session.query(&query).expect("Export failed");
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Export failed: {}", e))
+        })?;
 
         println!("Database saved successfully to: {}", file_path);
         Ok(())
