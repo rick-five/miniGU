@@ -10,7 +10,7 @@ use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDict, PyList, PyString};
+use pyo3::types::{PyDict, PyList, PyString};
 
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
@@ -57,13 +57,9 @@ impl PyMiniGU {
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        if self.session.is_none() {
-            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Session not initialized",
-            ));
-        }
-
-        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Execute the query
         let query_result = session.query(query_str).map_err(|e| {
@@ -647,15 +643,12 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
     Python::with_gil(|py| match array.data_type() {
         DataType::Int32 => {
             let arr = array.as_any().downcast_ref::<Int32Array>().ok_or_else(|| {
-                PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                    "Failed to downcast array to Int32Array for index {}",
-                    index
-                ))
+                PyErr::new::<pyo3::exceptions::PyTypeError, _>("Failed to downcast to Int32Array")
             })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
-                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                Ok(arr.value(index).into_py(py))
             }
         }
         DataType::Utf8 => {
@@ -663,15 +656,14 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or_else(|| {
-                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                        "Failed to downcast array to StringArray for index {}",
-                        index
-                    ))
+                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                        "Failed to downcast to StringArray",
+                    )
                 })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
-                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                Ok(arr.value(index).into_py(py))
             }
         }
         DataType::Boolean => {
@@ -679,20 +671,14 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 .as_any()
                 .downcast_ref::<BooleanArray>()
                 .ok_or_else(|| {
-                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                        "Failed to downcast array to BooleanArray for index {}",
-                        index
-                    ))
+                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                        "Failed to downcast to BooleanArray",
+                    )
                 })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
-                let value = pyo3::types::PyBool::new(py, arr.value(index));
-                Ok(value.into_pyobject(py).map(|v| {
-                    <pyo3::Bound<'_, PyBool> as Clone>::clone(&v)
-                        .into_any()
-                        .unbind()
-                })?)
+                Ok(arr.value(index).into_py(py))
             }
         }
         DataType::Float64 => {
@@ -700,15 +686,14 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 .as_any()
                 .downcast_ref::<Float64Array>()
                 .ok_or_else(|| {
-                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
-                        "Failed to downcast array to Float64Array for index {}",
-                        index
-                    ))
+                    PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                        "Failed to downcast to Float64Array",
+                    )
                 })?;
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
-                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
+                Ok(arr.value(index).into_py(py))
             }
         }
         _ => Ok(py.None()),
