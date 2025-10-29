@@ -54,6 +54,14 @@ impl PyMiniGU {
         Ok(())
     }
 
+    /// Drop method to ensure proper cleanup
+    fn __del__(&mut self) {
+        // Explicitly drop the session and database to ensure proper cleanup
+        self.session.take();
+        self.database.take();
+        self.current_graph.take();
+    }
+
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
@@ -697,6 +705,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
                 Ok(py.None())
             } else {
                 let value = pyo3::types::PyBool::new(py, arr.value(index));
+                // Clone the value to ensure proper ownership
                 Ok(<pyo3::Bound<'_, PyBool> as Clone>::clone(&value)
                     .into_any()
                     .unbind())
