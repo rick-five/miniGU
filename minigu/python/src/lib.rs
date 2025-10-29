@@ -371,6 +371,7 @@ impl PyMiniGU {
         } else {
             format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
         };
+        
         match session.query(&query) {
             Ok(_) => {
                 println!("Graph '{}' created successfully", sanitized_name);
@@ -533,9 +534,17 @@ impl PyMiniGU {
         // Use current graph or default to "default_graph"
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
-        // Use correct syntax for beginning transaction
-        let query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-        session.query(&query).map_err(|e| {
+        // First make sure we're using the correct graph
+        let use_query = format!("USE GRAPH {}", graph_name);
+        session.query(&use_query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to use graph '{}': {}",
+                graph_name, e
+            ))
+        })?;
+
+        // Then begin transaction - using simple BEGIN syntax
+        session.query("BEGIN").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to begin transaction: {}",
                 e
@@ -546,7 +555,9 @@ impl PyMiniGU {
 
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
         session.query("COMMIT").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to commit transaction: {}",
@@ -558,7 +569,9 @@ impl PyMiniGU {
 
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
         session.query("ROLLBACK").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to rollback transaction: {}",
@@ -588,57 +601,3 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
         result.push(row_vec);
     }
-
-    Ok(result)
-}
-
-/// Extract a value from an Arrow array at a specific index
-fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
-    Python::with_gil(|py| match array.data_type() {
-        DataType::Int32 => {
-            let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
-            if arr.is_null(index) {
-                Ok(py.None())
-            } else {
-                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-            }
-        }
-        DataType::Utf8 => {
-            let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
-            if arr.is_null(index) {
-                Ok(py.None())
-            } else {
-                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-            }
-        }
-        DataType::Boolean => {
-            let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
-            if arr.is_null(index) {
-                Ok(py.None())
-            } else {
-                let value = pyo3::types::PyBool::new(py, arr.value(index));
-                Ok(value.into_pyobject(py).map(|v| {
-                    <pyo3::Bound<'_, PyBool> as Clone>::clone(&v)
-                        .into_any()
-                        .unbind()
-                })?)
-            }
-        }
-        DataType::Float64 => {
-            let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
-            if arr.is_null(index) {
-                Ok(py.None())
-            } else {
-                Ok(arr.value(index).into_pyobject(py)?.into_any().unbind())
-            }
-        }
-        _ => Ok(py.None()),
-    })
-}
-
-/// Python module for miniGU
-#[pymodule]
-fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyMiniGU>()?;
-    Ok(())
-}
