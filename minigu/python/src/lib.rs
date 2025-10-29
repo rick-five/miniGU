@@ -563,14 +563,9 @@ impl PyMiniGU {
 
     /// Begin a transaction
     fn begin_transaction(&mut self) -> PyResult<()> {
-        // Check if session is initialized
-        if self.session.is_none() {
-            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Session not initialized",
-            ));
-        }
-
-        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         let query = "START TRANSACTION";
         session.query(query).map_err(|e| {
@@ -585,13 +580,10 @@ impl PyMiniGU {
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
         // Check if session is initialized
-        if self.session.is_none() {
-            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Session not initialized",
-            ));
-        }
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
-        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
         session.query("COMMIT").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to commit transaction: {}",
@@ -604,13 +596,10 @@ impl PyMiniGU {
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
         // Check if session is initialized
-        if self.session.is_none() {
-            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Session not initialized",
-            ));
-        }
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
-        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
         session.query("ROLLBACK").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to rollback transaction: {}",
