@@ -6,9 +6,9 @@ use std::path::Path;
 
 use arrow::array::*;
 use arrow::datatypes::DataType;
+use minigu::common::data_chunk::DataChunk;
 use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
-use minigu_common::data_chunk::DataChunk;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
@@ -48,8 +48,18 @@ impl PyMiniGU {
                 e
             ))
         })?;
+        
+        // Debug information
+        println!("Session initialized");
+        if let Some(ref ctx) = session.context().current_schema {
+            println!("Current schema is set");
+        } else {
+            println!("Current schema is NOT set");
+        }
+        
         self.database = Some(db);
         self.session = Some(session);
+        self.current_graph = None;
         Ok(())
     }
 
@@ -59,7 +69,12 @@ impl PyMiniGU {
         let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the query
-        let query_result = session.query(query_str).expect("Query execution failed");
+        let query_result = session.query(query_str).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Query execution failed: {}",
+                e
+            ))
+        })?;
 
         // Convert QueryResult to Python dict
         let dict = PyDict::new(py);
@@ -342,6 +357,7 @@ impl PyMiniGU {
     }
 
     /// Create a new graph
+    #[pyo3(signature = (graph_name, schema = None))]
     fn create_graph(&mut self, graph_name: &str, schema: Option<&str>) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
 
@@ -363,14 +379,14 @@ impl PyMiniGU {
         }
 
         // Create the graph using the create_test_graph procedure
-        let query = if let Some(schema_str) = schema {
+        let query = if let Some(_schema_str) = schema {
             // If schema is provided, we might want to use it in the future
             // For now, we'll just ignore it and use the same procedure
             format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
         } else {
             format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
         };
-        
+
         match session.query(&query) {
             Ok(_) => {
                 println!("Graph '{}' created successfully", sanitized_name);
@@ -533,12 +549,12 @@ impl PyMiniGU {
         // Use current graph or default to "default_graph"
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
-        // Use correct syntax for beginning transaction
-        let query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-        session.query(&query).map_err(|e| {
+        // Create a transaction for this batch
+        let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
+        session.query(&transaction_query).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to begin transaction: {}",
-                e
+                "Failed to begin transaction into '{}': {}",
+                graph_name, e
             ))
         })?;
         Ok(())
@@ -546,7 +562,9 @@ impl PyMiniGU {
 
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
         session.query("COMMIT").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to commit transaction: {}",
@@ -558,7 +576,9 @@ impl PyMiniGU {
 
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
         session.query("ROLLBACK").map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to rollback transaction: {}",
@@ -636,7 +656,7 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
     })
 }
 
-/// Python module for miniGU
+/// Python module initialization function
 #[pymodule]
 fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMiniGU>()?;
