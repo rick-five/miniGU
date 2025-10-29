@@ -50,6 +50,7 @@ impl PyMiniGU {
         })?;
         self.database = Some(db);
         self.session = Some(session);
+        self.current_graph = None;
         Ok(())
     }
 
@@ -59,7 +60,12 @@ impl PyMiniGU {
         let session = self.session.as_mut().expect("Session not initialized");
 
         // Execute the query
-        let query_result = session.query(query_str).expect("Query execution failed");
+        let query_result = session.query(query_str).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Query execution failed: {}",
+                e
+            ))
+        })?;
 
         // Convert QueryResult to Python dict
         let dict = PyDict::new(py);
@@ -185,9 +191,12 @@ impl PyMiniGU {
             for (key, value) in dict.iter() {
                 let key_str = key
                     .downcast::<PyString>()
-                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
-                        format!("Dictionary keys must be strings, but key in item {} is not a string", index)
-                    ))?
+                    .map_err(|_| {
+                        PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                            "Dictionary keys must be strings, but key in item {} is not a string",
+                            index
+                        ))
+                    })?
                     .to_string();
 
                 // Validate key is not empty
@@ -525,20 +534,12 @@ impl PyMiniGU {
         // Use current graph or default to "default_graph"
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
-        // First make sure we're using the correct graph
-        let use_query = format!("USE GRAPH {}", graph_name);
-        session.query(&use_query).map_err(|e| {
+        // Create a transaction for this batch
+        let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
+        session.query(&transaction_query).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to use graph '{}': {}",
+                "Failed to begin transaction into '{}': {}",
                 graph_name, e
-            ))
-        })?;
-
-        // Then begin transaction - using simple BEGIN syntax
-        session.query("BEGIN").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to begin transaction: {}",
-                e
             ))
         })?;
         Ok(())
