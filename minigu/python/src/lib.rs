@@ -57,9 +57,13 @@ impl PyMiniGU {
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized",
+            ));
+        }
+
+        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
 
         // Execute the query
         let query_result = session.query(query_str).map_err(|e| {
@@ -85,6 +89,11 @@ impl PyMiniGU {
         // Convert data
         let data_list = PyList::empty(py);
         for chunk in query_result.iter() {
+            // Check if chunk is valid before processing
+            if chunk.columns().is_empty() {
+                continue; // Skip empty chunks
+            }
+
             // Convert DataChunk to Python list of lists
             let chunk_data = convert_data_chunk(chunk).map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyException, _>(format!(
@@ -92,6 +101,7 @@ impl PyMiniGU {
                     e
                 ))
             })?;
+
             for row in chunk_data {
                 let row_list = PyList::empty(py);
                 for value in row {
@@ -557,42 +567,40 @@ impl PyMiniGU {
 
     /// Commit current transaction
     fn commit(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        });
-
-        match session {
-            Ok(sess) => {
-                sess.query("COMMIT").map_err(|e| {
-                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                        "Failed to commit transaction: {}",
-                        e
-                    ))
-                })?;
-                Ok(())
-            }
-            Err(e) => Err(e),
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized",
+            ));
         }
+
+        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
+        session.query("COMMIT").map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to commit transaction: {}",
+                e
+            ))
+        })?;
+        Ok(())
     }
 
     /// Rollback current transaction
     fn rollback(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        });
-
-        match session {
-            Ok(sess) => {
-                sess.query("ROLLBACK").map_err(|e| {
-                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                        "Failed to rollback transaction: {}",
-                        e
-                    ))
-                })?;
-                Ok(())
-            }
-            Err(e) => Err(e),
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized",
+            ));
         }
+
+        let session = self.session.as_mut().unwrap(); // Safe to unwrap since we checked above
+        session.query("ROLLBACK").map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to rollback transaction: {}",
+                e
+            ))
+        })?;
+        Ok(())
     }
 }
 
@@ -602,6 +610,16 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
     // Get the number of rows
     let num_rows = chunk.len();
+
+    // Safety check for empty chunks
+    if num_rows == 0 {
+        return Ok(result);
+    }
+
+    // Check if columns exist
+    if chunk.columns().is_empty() {
+        return Ok(result);
+    }
 
     // For each row, create a list of values
     for row_idx in 0..num_rows {
