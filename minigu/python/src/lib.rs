@@ -51,12 +51,10 @@ impl PyMiniGU {
         
         // Debug information
         println!("Session initialized");
-        if let Some(ref ctx) = session.context().current_schema {
-            println!("Current schema is set");
-        } else {
-            println!("Current schema is NOT set");
-        }
-        
+        // Note: We can't access the private context field of Session here
+        // The session is initialized and ready to use
+        println!("Session is ready");
+
         self.database = Some(db);
         self.session = Some(session);
         self.current_graph = None;
