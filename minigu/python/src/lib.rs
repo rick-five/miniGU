@@ -484,7 +484,9 @@ impl PyMiniGU {
 
     /// Drop a graph
     fn drop_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -522,7 +524,9 @@ impl PyMiniGU {
 
     /// Use a graph
     fn use_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -542,7 +546,9 @@ impl PyMiniGU {
         }
 
         let query = format!("USE GRAPH {}", sanitized_name);
-        session.query(&query).expect("Failed to use graph");
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to use graph: {}", e))
+        })?;
         self.current_graph = Some(sanitized_name);
         Ok(())
     }
