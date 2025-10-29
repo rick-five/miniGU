@@ -85,13 +85,28 @@ impl PyMiniGU {
         let data_list = PyList::empty(py);
         for chunk in query_result.iter() {
             // Convert DataChunk to Python list of lists
-            let chunk_data = convert_data_chunk(chunk)?;
+            let chunk_data = convert_data_chunk(chunk).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to convert data chunk: {}",
+                    e
+                ))
+            })?;
             for row in chunk_data {
                 let row_list = PyList::empty(py);
                 for value in row {
-                    row_list.append(value)?;
+                    row_list.append(value).map_err(|e| {
+                        PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                            "Failed to append value to row: {}",
+                            e
+                        ))
+                    })?;
                 }
-                data_list.append(row_list)?;
+                data_list.append(row_list).map_err(|e| {
+                    PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                        "Failed to append row to data: {}",
+                        e
+                    ))
+                })?;
             }
         }
 
@@ -100,17 +115,40 @@ impl PyMiniGU {
         // Convert metrics
         let metrics = query_result.metrics();
         let metrics_dict = PyDict::new(py);
-        metrics_dict.set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)?;
-        metrics_dict.set_item(
-            "planning_time_ms",
-            metrics.planning_time().as_millis() as f64,
-        )?;
-        metrics_dict.set_item(
-            "execution_time_ms",
-            metrics.execution_time().as_millis() as f64,
-        )?;
+        metrics_dict
+            .set_item("parsing_time_ms", metrics.parsing_time().as_millis() as f64)
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to set parsing_time_ms: {}",
+                    e
+                ))
+            })?;
+        metrics_dict
+            .set_item(
+                "planning_time_ms",
+                metrics.planning_time().as_millis() as f64,
+            )
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to set planning_time_ms: {}",
+                    e
+                ))
+            })?;
+        metrics_dict
+            .set_item(
+                "execution_time_ms",
+                metrics.execution_time().as_millis() as f64,
+            )
+            .map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to set execution_time_ms: {}",
+                    e
+                ))
+            })?;
 
-        dict.set_item("metrics", metrics_dict)?;
+        dict.set_item("metrics", metrics_dict).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to set metrics: {}", e))
+        })?;
 
         Ok(dict.into())
     }
@@ -577,7 +615,12 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
         // For each column, get the value at this row
         for col in chunk.columns() {
-            let value = extract_value_from_array(col, row_idx)?;
+            let value = extract_value_from_array(col, row_idx).map_err(|e| {
+                PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to extract value from array at index {}: {}",
+                    row_idx, e
+                ))
+            })?;
             row_vec.push(value);
         }
 
