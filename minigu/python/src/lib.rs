@@ -185,12 +185,9 @@ impl PyMiniGU {
             for (key, value) in dict.iter() {
                 let key_str = key
                     .downcast::<PyString>()
-                    .map_err(|_| {
-                        PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                            "Dictionary keys must be strings, but key in item {} is not a string",
-                            index
-                        ))
-                    })?
+                    .map_err(|_| PyErr::new::<pyo3::exceptions::PyException, _>(
+                        format!("Dictionary keys must be strings, but key in item {} is not a string", index)
+                    ))?
                     .to_string();
 
                 // Validate key is not empty
@@ -342,6 +339,7 @@ impl PyMiniGU {
     }
 
     /// Create a new graph
+    #[pyo3(signature = (graph_name, schema = None))]
     fn create_graph(&mut self, graph_name: &str, schema: Option<&str>) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
 
@@ -363,14 +361,7 @@ impl PyMiniGU {
         }
 
         // Create the graph using the create_test_graph procedure
-        let query = if let Some(_schema_str) = schema {
-            // If schema is provided, we might want to use it in the future
-            // For now, we'll just ignore it and use the same procedure
-            println!("Schema provided but not yet implemented: {}", _schema_str);
-            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
-        } else {
-            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
-        };
+        let query = format!("CALL create_test_graph('{}') RETURN *", sanitized_name);
 
         match session.query(&query) {
             Ok(_) => {
