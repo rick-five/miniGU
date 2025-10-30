@@ -613,3 +613,10 @@ fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
 
     Ok(result)
 }
+
+/// Python module definition
+#[pymodule]
+fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyMiniGU>()?;
+    Ok(())
+}
