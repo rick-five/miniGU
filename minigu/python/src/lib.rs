@@ -539,7 +539,7 @@ impl PyMiniGU {
     }
 
     /// Rollback the current transaction
-    /// 
+    ///
     /// Currently returns Ok immediately as transaction rollback is not yet implemented.
     /// This method does not execute any GQL query and serves as a placeholder.
     fn rollback(&mut self) -> PyResult<()> {
