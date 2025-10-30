@@ -3,7 +3,6 @@
 //! This module provides Python bindings for the miniGU graph database using PyO3.
 
 use std::path::Path;
-use std::sync::Arc;
 
 use arrow::array::*;
 use arrow::datatypes::DataType;
