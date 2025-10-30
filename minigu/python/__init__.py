@@ -1,7 +1,8 @@
 # Main module initialization file
 try:
     from .minigu_python import PyMiniGU
-    __all__ = ['PyMiniGU']
+    HAS_RUST_BINDINGS = True
+    __all__ = ['PyMiniGU', 'HAS_RUST_BINDINGS']
 except ImportError:
     # Fallback if the Rust extension is not available
-    pass
+    HAS_RUST_BINDINGS = False

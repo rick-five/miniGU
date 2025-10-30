@@ -295,8 +295,15 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # Transaction functionality is not yet implemented in the backend
-        raise TransactionError("Transactions not yet implemented in Rust backend")
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Use GQL syntax to begin transaction
+                query = "BEGIN"
+                await self.execute(query)
+            except Exception as e:
+                raise TransactionError(f"Failed to begin transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def commit(self) -> None:
         """
@@ -309,8 +316,13 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # Transaction functionality is not yet implemented in the backend
-        raise TransactionError("Transactions not yet implemented in Rust backend")
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.commit()
+            except Exception as e:
+                raise TransactionError(f"Failed to commit transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
     
     async def rollback(self) -> None:
         """
@@ -323,8 +335,13 @@ class AsyncMiniGU:
         if not self.is_connected:
             raise MiniGUError("Database not connected")
         
-        # Transaction functionality is not yet implemented in the backend
-        raise TransactionError("Transactions not yet implemented in Rust backend")
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                self._rust_instance.rollback()
+            except Exception as e:
+                raise TransactionError(f"Failed to rollback transaction: {str(e)}")
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
 
 
 class MiniGU:
@@ -442,7 +459,6 @@ class MiniGU:
         
         Raises:
             MiniGUError: Raised when database is not connected
-            TransactionError: Raised when transaction cannot be started
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -463,7 +479,6 @@ class MiniGU:
         
         Raises:
             MiniGUError: Raised when database is not connected
-            TransactionError: Raised when commit fails
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -482,7 +497,6 @@ class MiniGU:
         
         Raises:
             MiniGUError: Raised when database is not connected
-            TransactionError: Raised when rollback fails
         """
         if not self.is_connected:
             raise MiniGUError("Database not connected")
@@ -494,7 +508,7 @@ class MiniGU:
                 raise TransactionError(f"Failed to rollback transaction: {str(e)}")
         else:
             raise RuntimeError("Rust bindings required for database operations")
-
+    
     def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
         Load data into the database
