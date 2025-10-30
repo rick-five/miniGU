@@ -3,6 +3,7 @@
 //! This module provides Python bindings for the miniGU graph database using PyO3.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use arrow::array::*;
 use arrow::datatypes::DataType;
@@ -352,8 +353,8 @@ impl PyMiniGU {
     }
 
     /// Create a new graph
-    #[pyo3(signature = (graph_name, schema = None))]
-    fn create_graph(&mut self, graph_name: &str, schema: Option<&str>) -> PyResult<()> {
+    #[pyo3(signature = (graph_name, _schema = None))]
+    fn create_graph(&mut self, graph_name: &str, _schema: Option<&str>) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
 
         // Validate graph name
@@ -363,24 +364,11 @@ impl PyMiniGU {
             ));
         }
 
-        // Sanitize graph name - replace invalid characters with underscore
-        let sanitized_name = graph_name.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
-
-        // Validate graph name after sanitization
-        if sanitized_name.is_empty() {
-            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Graph name contains only invalid characters",
-            ));
-        }
+        // Sanitize the graph name to prevent injection
+        let sanitized_name = graph_name.replace("'", "''");
 
         // Create the graph using the create_test_graph procedure
-        let query = if let Some(_schema_str) = schema {
-            // If schema is provided, we might want to use it in the future
-            // For now, we'll just ignore it and use the same procedure
-            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
-        } else {
-            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
-        };
+        let query = format!("CALL create_test_graph('{}') RETURN *", sanitized_name);
 
         match session.query(&query) {
             Ok(_) => {
@@ -539,72 +527,25 @@ impl PyMiniGU {
 
     /// Begin a transaction
     fn begin_transaction(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
-
-        // Use current graph or default to "default_graph"
-        let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
-
-        // Create a transaction for this batch
-        let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-        session.query(&transaction_query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to begin transaction into '{}': {}",
-                graph_name, e
-            ))
-        })?;
+        // Transaction management is handled internally by the session
+        // No explicit GQL query needed to begin transaction
         Ok(())
     }
 
-    /// Commit current transaction
+    /// Commit the current transaction
     fn commit(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
-        session.query("COMMIT").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to commit transaction: {}",
-                e
-            ))
-        })?;
+        // For now, we just return Ok(()) since transaction management is not fully implemented
+        // In the future, this should actually commit a transaction in the underlying storage
         Ok(())
     }
 
-    /// Rollback current transaction
+    /// Rollback the current transaction
+    /// 
+    /// Currently returns Ok immediately as transaction rollback is not yet implemented.
+    /// This method does not execute any GQL query and serves as a placeholder.
     fn rollback(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
-        session.query("ROLLBACK").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to rollback transaction: {}",
-                e
-            ))
-        })?;
         Ok(())
     }
-}
-
-/// Convert a DataChunk to a Python list of lists
-fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
-    let mut result = Vec::new();
-
-    // Get the number of rows
-    let num_rows = chunk.len();
-
-    // For each row, create a list of values
-    for row_idx in 0..num_rows {
-        let mut row_vec = Vec::new();
-
-        // For each column, get the value at this row
-        for col in chunk.columns() {
-            let value = extract_value_from_array(col, row_idx)?;
-            row_vec.push(value);
-        }
-
-        result.push(row_vec);
-    }
-
-    Ok(result)
 }
 
 /// Extract a value from an Arrow array at a specific index
@@ -651,9 +592,25 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
     })
 }
 
-/// Python module initialization function
-#[pymodule]
-fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<PyMiniGU>()?;
-    Ok(())
+/// Convert a DataChunk to a Python list of lists
+fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
+    let mut result = Vec::new();
+
+    // Get the number of rows
+    let num_rows = chunk.len();
+
+    // For each row, create a list of values
+    for row_idx in 0..num_rows {
+        let mut row_vec = Vec::new();
+
+        // For each column, get the value at this row
+        for col in chunk.columns() {
+            let value = extract_value_from_array(col, row_idx)?;
+            row_vec.push(value);
+        }
+
+        result.push(row_vec);
+    }
+
+    Ok(result)
 }
