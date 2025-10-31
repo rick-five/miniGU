@@ -17,6 +17,10 @@ cargo doc --lib --no-deps --features "${DEFAULT_FEATURES:-std,serde,miette}"
 echo "Running Python API tests..."
 cd minigu/python
 
+# Build the Python extension module first
+echo "Building Python extension module..."
+cargo build --features "extension-module"
+
 if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
     echo "Python is not available, skipping Python tests"
     exit 0
@@ -28,6 +32,18 @@ else
     PYTHON_CMD=python
 fi
 
-echo "Attempting to run Python tests directly..."
-$PYTHON_CMD test_minigu_api.py || echo "Python tests failed or skipped"
+# Copy the built extension module to the current directory so Python can find it
+# The extension will have .so suffix on Linux, .dylib on macOS, and .dll on Windows
+if [ -f "../../target/debug/libminigu_python.so" ]; then
+    cp "../../target/debug/libminigu_python.so" "./minigu_python.so"
+elif [ -f "../../target/debug/libminigu_python.dylib" ]; then
+    cp "../../target/debug/libminigu_python.dylib" "./minigu_python.so"
+elif [ -f "../../target/debug/minigu_python.dll" ]; then
+    cp "../../target/debug/minigu_python.dll" "./minigu_python.pyd"
+elif [ -f "../../target/debug/libminigu_python.dll" ]; then
+    cp "../../target/debug/libminigu_python.dll" "./minigu_python.pyd"
+fi
+
+echo "Attempting to run Python tests..."
+$PYTHON_CMD -m pytest test_minigu_api.py -v || $PYTHON_CMD test_minigu_api.py || echo "Python tests failed or skipped"
 echo "Python API tests completed."
