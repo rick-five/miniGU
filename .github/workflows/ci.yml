@@ -156,6 +156,16 @@ jobs:
         fi
         echo "Building Python extension..."
         maturin develop
+    - name: Run Python tests
+      run: |
+        cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        echo "Running Python API tests..."
+        python test_minigu_api.py
 
   docs:
     name: Build Docs
