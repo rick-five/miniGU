@@ -32,6 +32,27 @@ else
     PYTHON_CMD=python
 fi
 
+# Set up virtual environment
+echo "Setting up virtual environment..."
+$PYTHON_CMD -m venv .venv || echo "Failed to create virtual environment"
+
+# Activate virtual environment
+if [ -f ".venv/bin/activate" ]; then
+    # Linux/macOS
+    source .venv/bin/activate
+elif [ -f ".venv/Scripts/activate" ]; then
+    # Windows
+    source .venv/Scripts/activate
+else
+    echo "Virtual environment activation script not found"
+    exit 1
+fi
+
+# Upgrade pip and install required packages
+echo "Installing required packages..."
+pip install --upgrade pip
+pip install pytest maturin
+
 # Copy the built extension module to the current directory so Python can find it
 # The extension will have .so suffix on Linux, .dylib on macOS, and .dll on Windows
 if [ -f "../../target/debug/libminigu_python.so" ]; then
@@ -45,5 +66,5 @@ elif [ -f "../../target/debug/libminigu_python.dll" ]; then
 fi
 
 echo "Attempting to run Python tests..."
-$PYTHON_CMD -m pytest test_minigu_api.py -v || $PYTHON_CMD test_minigu_api.py || echo "Python tests failed or skipped"
+python -m pytest test_minigu_api.py -v || python test_minigu_api.py
 echo "Python API tests completed."
