@@ -11,7 +11,7 @@ use minigu::common::data_chunk::DataChunk;
 use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
+use pyo3::types::{PyDict, PyList};
 
 // Define custom exception types
 #[pyfunction]
