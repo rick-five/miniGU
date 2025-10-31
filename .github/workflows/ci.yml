@@ -179,8 +179,23 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Running minimal import test..."
-        python ../../scripts/minimal_import_test.py
+        echo "Running minimal import and instantiation test..."
+        
+        # 创建最小化 Python 脚本
+        cat > minimal_test.py <<'EOF'
+import sys
+try:
+    import minigu_python
+    print("SUCCESS: minigu_python imported successfully.")
+    db = minigu_python.PyMiniGU()
+    print("SUCCESS: PyMiniGU instantiated.")
+except Exception as e:
+    print("FAILURE: Import or Instantiation failed with error: {e}".format(e=e))
+except ImportError as e:
+    print("FAILURE: ImportError: {e}".format(e=e))
+EOF
+        # 使用 VENV 中的 Python 运行脚本，确保在当前目录 (minigu/python)
+        python minimal_test.py
     - name: Run Python tests
       run: |
         cd minigu/python
