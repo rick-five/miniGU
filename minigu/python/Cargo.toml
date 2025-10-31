@@ -10,8 +10,7 @@ crate-type = ["cdylib"]
 name = "minigu_python"
 
 [dependencies]
-arrow = { workspace = true }
-minigu = { workspace = true }
+# 移除未使用的依赖项arrow和minigu
 pyo3 = { workspace = true, features = ["extension-module", "abi3-py37"] }
 
 [build-dependencies]
