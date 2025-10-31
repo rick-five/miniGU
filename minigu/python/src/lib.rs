@@ -12,6 +12,35 @@ use minigu::session::Session;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
+// Define custom exception types
+#[pyfunction]
+fn is_syntax_error(e: &Bound<PyAny>) -> PyResult<bool> {
+    // For now, we'll do a simple string check, but in a real implementation
+    // we would check the actual error type from the Rust side
+    let error_str: String = e.str()?.extract()?;
+    Ok(error_str.to_lowercase().contains("syntax")
+        || error_str.to_lowercase().contains("unexpected"))
+}
+
+#[pyfunction]
+fn is_timeout_error(e: &Bound<PyAny>) -> PyResult<bool> {
+    let error_str: String = e.str()?.extract()?;
+    Ok(error_str.to_lowercase().contains("timeout"))
+}
+
+#[pyfunction]
+fn is_transaction_error(e: &Bound<PyAny>) -> PyResult<bool> {
+    let error_str: String = e.str()?.extract()?;
+    Ok(error_str.to_lowercase().contains("transaction"))
+}
+
+#[pyfunction]
+fn is_not_implemented_error(e: &Bound<PyAny>) -> PyResult<bool> {
+    let error_str: String = e.str()?.extract()?;
+    Ok(error_str.to_lowercase().contains("not implemented")
+        || error_str.to_lowercase().contains("not yet implemented"))
+}
+
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
 #[allow(clippy::upper_case_acronyms)]
@@ -289,8 +318,10 @@ impl PyMiniGU {
 
         // Execute all batches
         for (batch_index, batch) in batch_statements.iter().enumerate() {
-            // Create a transaction for this batch
-            let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
+            // Create a transaction for this batch using correct GQL syntax
+            // Based on the test code, we should use BEGIN TRANSACTION instead of START TRANSACTION
+            // INTO
+            let transaction_query = "BEGIN TRANSACTION".to_string();
             session.query(&transaction_query).map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                     "Failed to begin transaction for batch {}: {}",
@@ -308,8 +339,8 @@ impl PyMiniGU {
             }
 
             // Commit the transaction
-            let commit_query = "COMMIT";
-            session.query(commit_query).map_err(|e| {
+            let commit_query = "COMMIT TRANSACTION".to_string();
+            session.query(&commit_query).map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                     "Failed to commit transaction for batch {}: {}",
                     batch_index, e
@@ -352,8 +383,8 @@ impl PyMiniGU {
     }
 
     /// Create a new graph
-    #[pyo3(signature = (graph_name, schema = None))]
-    fn create_graph(&mut self, graph_name: &str, schema: Option<&str>) -> PyResult<()> {
+    #[pyo3(signature = (graph_name, _schema = None))]
+    fn create_graph(&mut self, graph_name: &str, _schema: Option<&str>) -> PyResult<()> {
         let session = self.session.as_mut().expect("Session not initialized");
 
         // Validate graph name
@@ -363,36 +394,26 @@ impl PyMiniGU {
             ));
         }
 
-        // Sanitize graph name - replace invalid characters with underscore
-        let sanitized_name = graph_name.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
-
-        // Validate graph name after sanitization
-        if sanitized_name.is_empty() {
-            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                "Graph name contains only invalid characters",
-            ));
-        }
+        // Sanitize the graph name to prevent injection
+        let sanitized_name = graph_name.replace("'", "''");
 
         // Create the graph using the create_test_graph procedure
-        let query = if let Some(_schema_str) = schema {
-            // If schema is provided, we might want to use it in the future
-            // For now, we'll just ignore it and use the same procedure
-            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
-        } else {
-            format!("CALL create_test_graph('{}') RETURN *", sanitized_name)
-        };
+        let query = format!("CALL create_test_graph('{}')", sanitized_name);
+        println!("Attempting to execute query: {}", query);
 
         match session.query(&query) {
             Ok(_) => {
                 println!("Graph '{}' created successfully", sanitized_name);
                 self.current_graph = Some(sanitized_name);
-
                 Ok(())
             }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to create graph '{}': {}",
-                sanitized_name, e
-            ))),
+            Err(e) => {
+                println!("Error executing query '{}': {}", query, e);
+                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create graph '{}': {}",
+                    sanitized_name, e
+                )))
+            }
         }
     }
 
@@ -538,73 +559,35 @@ impl PyMiniGU {
     }
 
     /// Begin a transaction
+    /// Not yet implemented in Rust backend
     fn begin_transaction(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
-
-        // Use current graph or default to "default_graph"
-        let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
-
-        // Create a transaction for this batch
-        let transaction_query = format!("BEGIN TRANSACTION INTO {}", graph_name);
-        session.query(&transaction_query).map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to begin transaction into '{}': {}",
-                graph_name, e
-            ))
-        })?;
-        Ok(())
+        Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+            "Transaction functionality not yet implemented in Rust backend",
+        ))
     }
 
-    /// Commit current transaction
+    /// Commit the current transaction
+    /// Not yet implemented in Rust backend
     fn commit(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
-        session.query("COMMIT").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to commit transaction: {}",
-                e
-            ))
-        })?;
-        Ok(())
+        Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+            "Transaction functionality not yet implemented in Rust backend",
+        ))
     }
 
-    /// Rollback current transaction
+    /// Rollback the current transaction
+    /// Not yet implemented in Rust backend
     fn rollback(&mut self) -> PyResult<()> {
-        let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
-        })?;
-        session.query("ROLLBACK").map_err(|e| {
-            PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to rollback transaction: {}",
-                e
-            ))
-        })?;
-        Ok(())
-    }
-}
-
-/// Convert a DataChunk to a Python list of lists
-fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
-    let mut result = Vec::new();
-
-    // Get the number of rows
-    let num_rows = chunk.len();
-
-    // For each row, create a list of values
-    for row_idx in 0..num_rows {
-        let mut row_vec = Vec::new();
-
-        // For each column, get the value at this row
-        for col in chunk.columns() {
-            let value = extract_value_from_array(col, row_idx)?;
-            row_vec.push(value);
-        }
-
-        result.push(row_vec);
+        Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+            "Transaction functionality not yet implemented in Rust backend",
+        ))
     }
 
-    Ok(result)
+    /// Get the error type for the last operation
+    fn get_last_error_type(&self, e: &Bound<PyAny>) -> PyResult<String> {
+        // This is a placeholder - in a real implementation we would analyze the actual error
+        let error_str: String = e.str()?.extract()?;
+        Ok(error_str)
+    }
 }
 
 /// Extract a value from an Arrow array at a specific index
@@ -651,9 +634,36 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
     })
 }
 
-/// Python module initialization function
+/// Convert a DataChunk to a Python list of lists
+fn convert_data_chunk(chunk: &DataChunk) -> PyResult<Vec<Vec<PyObject>>> {
+    let mut result = Vec::new();
+
+    // Get the number of rows
+    let num_rows = chunk.len();
+
+    // For each row, create a list of values
+    for row_idx in 0..num_rows {
+        let mut row_vec = Vec::new();
+
+        // For each column, get the value at this row
+        for col in chunk.columns() {
+            let value = extract_value_from_array(col, row_idx)?;
+            row_vec.push(value);
+        }
+
+        result.push(row_vec);
+    }
+
+    Ok(result)
+}
+
+/// Python module definition
 #[pymodule]
 fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMiniGU>()?;
+    m.add_function(wrap_pyfunction!(is_syntax_error, m)?)?;
+    m.add_function(wrap_pyfunction!(is_timeout_error, m)?)?;
+    m.add_function(wrap_pyfunction!(is_transaction_error, m)?)?;
+    m.add_function(wrap_pyfunction!(is_not_implemented_error, m)?)?;
     Ok(())
 }
