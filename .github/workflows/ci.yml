@@ -147,7 +147,7 @@ jobs:
         fi
         python -m pip install --upgrade pip
         pip install maturin
-    - name: Build Python extension
+    - name: Build Python extension with specific options
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -160,11 +160,15 @@ jobs:
         echo "Cargo version: $(cargo --version)"
         echo "Python version: $(python --version)"
         echo "Maturin version: $(maturin --version)"
+        echo "Current directory: $(pwd)"
+        echo "Files in current directory: $(ls -la)"
+        echo "Environment variables:"
+        env
         # Build the core module first to ensure all dependencies are available
         cargo build --verbose
-        # Then build the Python extension
-        maturin develop --verbose
-    - name: Run Python tests
+        # Then build the Python extension with specific options to avoid segfaults
+        maturin develop --release
+    - name: Run Python tests with detailed error handling
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -179,13 +183,52 @@ jobs:
         echo "Files in current directory: $(ls -la)"
         echo "Files in target directory: $(ls -la ../../target/debug/)"
         echo "Attempting to import minigu_python module..."
-        python -c "import minigu_python; print('MiniGU module loaded successfully')"
+        python -c "
+import sys
+print('Python path:', sys.path)
+try:
+    import minigu_python
+    print('MiniGU module loaded successfully')
+except Exception as e:
+    print('Failed to import minigu_python:', e)
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
         echo "Importing MiniGU class..."
-        python -c "from minigu import MiniGU; print('MiniGU class imported successfully')"
+        python -c "
+try:
+    from minigu import MiniGU
+    print('MiniGU class imported successfully')
+except Exception as e:
+    print('Failed to import MiniGU class:', e)
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
         echo "Importing AsyncMiniGU class..."
-        python -c "from minigu import AsyncMiniGU; print('AsyncMiniGU class imported successfully')"
+        python -c "
+try:
+    from minigu import AsyncMiniGU
+    print('AsyncMiniGU class imported successfully')
+except Exception as e:
+    print('Failed to import AsyncMiniGU class:', e)
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
         echo "Connecting to database..."
-        python -c "import minigu; db = minigu.connect(); print('Connected to database successfully')"
+        python -c "
+try:
+    import minigu
+    db = minigu.connect()
+    print('Connected to database successfully')
+except Exception as e:
+    print('Failed to connect to database:', e)
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
         echo "Running full test suite..."
         if ! python test_minigu_api.py; then
           echo "Python tests failed"
