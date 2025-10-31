@@ -14,11 +14,9 @@ import asyncio
 HAS_RUST_BINDINGS = False
 PyMiniGU = None
 
-# Try to import from the package first
+# Try to import from the safe wrapper module
 try:
-    from . import HAS_RUST_BINDINGS as LOCAL_HAS_RUST_BINDINGS, PyMiniGU as LOCAL_PyMiniGU
-    HAS_RUST_BINDINGS = LOCAL_HAS_RUST_BINDINGS
-    PyMiniGU = LOCAL_PyMiniGU
+    from .minigu_python import HAS_RUST_BINDINGS, PyMiniGU
 except (ImportError, AttributeError):
     # Fallback when running directly
     try:
