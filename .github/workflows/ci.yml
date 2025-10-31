@@ -172,6 +172,38 @@ jobs:
         fi
         echo "Building Python extension with maturin..."
         python -m maturin develop --release
+    - name: Run minimal import test
+      run: |
+        cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        echo "Running minimal import test..."
+        cat > minimal_test.py <<EOF
+import sys
+print("Python executable:", sys.executable)
+print("Python path:", sys.path)
+
+try:
+    import minigu_python
+    print("SUCCESS: minigu_python imported successfully.")
+    # Try to instantiate PyMiniGU to ensure class registration also works
+    try:
+        db = minigu_python.PyMiniGU()
+        print("SUCCESS: PyMiniGU instantiated.")
+    except Exception as e:
+        print(f"FAILURE: Instantiation failed with error: {e}")
+        import traceback
+        traceback.print_exc()
+except Exception as e:
+    print(f"FAILURE: Import failed with error: {e}")
+    import traceback
+    traceback.print_exc()
+EOF
+        echo "Executing minimal test..."
+        python minimal_test.py
     - name: Run Python tests
       run: |
         cd minigu/python
