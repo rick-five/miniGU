@@ -93,7 +93,9 @@ impl PyMiniGU {
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Call init() first.")
+        })?;
 
         // Execute the query
         let query_result = session.query(query_str).map_err(|e| {
@@ -192,7 +194,9 @@ impl PyMiniGU {
     /// Load data directly with batch support
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Call init() first.")
+        })?;
 
         // Convert Python data to Rust data structures
         let list = data.downcast::<PyList>().map_err(|_| {
@@ -385,7 +389,9 @@ impl PyMiniGU {
     /// Create a new graph
     #[pyo3(signature = (graph_name, _schema = None))]
     fn create_graph(&mut self, graph_name: &str, _schema: Option<&str>) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Call init() first.")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -495,7 +501,9 @@ impl PyMiniGU {
 
     /// Drop a graph
     fn drop_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Call init() first.")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -533,7 +541,9 @@ impl PyMiniGU {
 
     /// Use a graph
     fn use_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Call init() first.")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
