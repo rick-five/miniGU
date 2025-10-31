@@ -235,8 +235,3 @@ EOF
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
     - run: cargo doc --lib --no-deps --features ${{ env.DEFAULT_FEATURES }}
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-
-    - run: cargo doc --lib --no-deps --features ${{ env.DEFAULT_FEATURES }}
