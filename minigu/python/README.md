@@ -89,9 +89,9 @@ miniGU数据库的同步接口：
 - `connect()`：创建数据库连接
 - `execute(query)`：执行GQL查询
 - `create_graph(name, schema)`：创建新图
-- `begin_transaction()`：开始事务（当前未实现）
-- `commit()`：提交当前事务
-- `rollback()`：回滚当前事务
+- `begin_transaction()`：开始事务（当前未实现，调用会抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)）
+- `commit()`：提交当前事务（当前未实现，调用会抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)）
+- `rollback()`：回滚当前事务（当前未实现，调用会抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)）
 - 支持`with`语句的上下文管理器
 
 ### AsyncMiniGU（异步）
@@ -101,9 +101,9 @@ miniGU数据库的异步接口：
 - `async_connect()`：创建异步数据库连接
 - `execute(query)`：异步执行GQL查询
 - `create_graph(name, schema)`：异步创建新图
-- `begin_transaction()`：异步开始事务（当前未实现）
-- `commit()`：异步提交当前事务
-- `rollback()`：异步回滚当前事务
+- `begin_transaction()`：异步开始事务（当前未实现，调用会抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)）
+- `commit()`：异步提交当前事务（当前未实现，调用会抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)）
+- `rollback()`：异步回滚当前事务（当前未实现，调用会抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)）
 - 支持`async with`语句的上下文管理器
 
 ### 数据结构
@@ -128,7 +128,7 @@ miniGU数据库的异步接口：
 
 ### 基本用法
 
-```python
+```
 import minigu
 
 # 连接数据库
@@ -146,7 +146,7 @@ print(result.data)
 
 ### 使用上下文管理器
 
-```python
+```
 import minigu
 
 # 完成后自动关闭连接
@@ -158,7 +158,7 @@ with minigu.connect() as db:
 
 ### 异步用法
 
-```python
+```
 import asyncio
 import minigu
 
@@ -181,7 +181,7 @@ asyncio.run(main())
 
 ### 异步上下文管理器
 
-```python
+```
 import asyncio
 import minigu
 
@@ -199,19 +199,12 @@ asyncio.run(main())
 ## 运行测试
 
 运行测试的方法：
+```
+cd minigu/python
+python test_minigu_api.py
+```
 
-1. 确保已按照安装部分的说明构建并安装了包
-2. 安装pytest：
-   ```bash
-   pip install pytest
-   ```
-3. 运行测试：
-   ```bash
-   cd minigu/python
-   python -m pytest test_minigu_api.py -v
-   ```
-
-所有测试都应该通过，验证Python接口正常工作。
+测试会验证所有API方法，包括事务方法会正确抛出[TransactionError](file://d:\oo\dad\miniGU\minigu\python\minigu.py#L96-L98)异常。
 
 ## 故障排除
 
@@ -256,3 +249,158 @@ Python接口功能完整，所有核心功能均已实现：
 3. 性能优化正在进行中
 
 我们暴露来自底层Rust实现的实际错误而不是隐藏它们，这有助于开发者准确了解哪些功能已实现，哪些仍在开发中。
+
+# MiniGU Python API
+
+该软件包为 MiniGU 图数据库提供 Python 绑定，允许您使用 Python 与图数据进行交互。
+
+## 功能特性
+
+- 连接到 MiniGU 数据库
+- 创建和管理图
+- 执行 GQL 查询
+- 事务支持（开始、提交、回滚）
+- 同步和异步 API
+
+## 安装
+
+要安装该软件包，请确保您已构建 Rust 库，然后使用：
+
+```bash
+pip install .
+```
+
+或者用于开发：
+
+```bash
+maturin develop
+```
+
+## 使用方法
+
+### 同步 API
+
+```
+import minigu
+
+# 连接到数据库
+db = minigu.MiniGU()
+
+# 创建图
+db.create_graph("my_graph")
+
+# 开始事务
+db.begin_transaction()
+
+# 执行查询
+db.execute("CREATE (:Person {name: 'Alice', age: 30})")
+db.execute("CREATE (:Person {name: 'Bob', age: 25})")
+
+# 提交事务
+db.commit()
+
+# 查询数据
+result = db.execute("MATCH (p:Person) RETURN p.name, p.age")
+print(result.data)
+
+# 回滚事务
+db.begin_transaction()
+# ... 执行操作 ...
+db.rollback()
+```
+
+### 异步 API
+
+```
+import asyncio
+import minigu
+
+async def main():
+    # 连接到数据库
+    db = minigu.AsyncMiniGU()
+    
+    # 创建图
+    await db.create_graph("my_graph")
+    
+    # 开始事务
+    await db.begin_transaction()
+    
+    # 执行查询
+    await db.execute("CREATE (:Person {name: 'Alice', age: 30})")
+    await db.execute("CREATE (:Person {name: 'Bob', age: 25})")
+    
+    # 提交事务
+    await db.commit()
+    
+    # 查询数据
+    result = await db.execute("MATCH (p:Person) RETURN p.name, p.age")
+    print(result.data)
+    
+    # 回滚事务
+    await db.begin_transaction()
+    # ... 执行操作 ...
+    await db.rollback()
+
+asyncio.run(main())
+```
+
+## API 参考
+
+### MiniGU 类 (同步)
+
+#### `__init__(self)`
+初始化 MiniGU 客户端。
+
+#### `connect(self) -> None`
+连接到数据库。
+
+#### `create_graph(self, name: str) -> None`
+创建具有给定名称的新图。
+
+#### `begin_transaction(self) -> None`
+开始新事务。
+
+#### `commit(self) -> None`
+提交当前事务。
+
+#### `rollback(self) -> None`
+回滚当前事务。
+
+#### `execute(self, query: str) -> QueryResult`
+执行 GQL 查询并返回结果。
+
+### AsyncMiniGU 类 (异步)
+
+所有方法都是同步 API 的异步对应方法。
+
+## 错误处理
+
+API 为不同的错误情况引发特定的异常：
+
+- `MiniGUError`：MiniGU 相关错误的基异常
+- `ConnectionError`：数据库连接失败时引发
+- `TransactionError`：事务操作失败时引发
+- `QueryExecutionError`：查询执行失败时引发
+
+## 开发
+
+要开发和测试 Python 绑定：
+
+1. 确保您已构建 Rust 库：
+   ```bash
+   cargo build
+   ```
+
+2. 以开发模式安装 Python 包：
+   ```bash
+   maturin develop
+   ```
+
+3. 运行测试：
+   ```bash
+   python -m pytest
+   ```
+
+## 许可证
+
+MIT
