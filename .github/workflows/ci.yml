@@ -156,10 +156,14 @@ jobs:
           source .venv/bin/activate
         fi
         echo "Building Python extension..."
+        echo "Rust version: $(rustc --version)"
+        echo "Cargo version: $(cargo --version)"
+        echo "Python version: $(python --version)"
+        echo "Maturin version: $(maturin --version)"
         # Build the core module first to ensure all dependencies are available
-        cargo build
+        cargo build --verbose
         # Then build the Python extension
-        maturin develop
+        maturin develop --verbose
     - name: Run Python tests
       run: |
         cd minigu/python
@@ -174,10 +178,15 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files in current directory: $(ls -la)"
         echo "Files in target directory: $(ls -la ../../target/debug/)"
+        echo "Attempting to import minigu_python module..."
         python -c "import minigu_python; print('MiniGU module loaded successfully')"
+        echo "Importing MiniGU class..."
         python -c "from minigu import MiniGU; print('MiniGU class imported successfully')"
+        echo "Importing AsyncMiniGU class..."
         python -c "from minigu import AsyncMiniGU; print('AsyncMiniGU class imported successfully')"
+        echo "Connecting to database..."
         python -c "import minigu; db = minigu.connect(); print('Connected to database successfully')"
+        echo "Running full test suite..."
         if ! python test_minigu_api.py; then
           echo "Python tests failed"
           exit 1
