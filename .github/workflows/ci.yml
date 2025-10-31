@@ -136,81 +136,36 @@ jobs:
       with:
         python-version: '3.10'
     - uses: Swatinem/rust-cache@v2
-    - name: Set up virtual environment and install maturin
+    - name: Set up isolated virtual environment and test Python API
       run: |
-        cd minigu/python
-        python -m venv .venv
+        # Create a completely isolated test environment
+        python -m venv /tmp/minigu-test-env
         if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
+          source /tmp/minigu-test-env/Scripts/activate
         else
-          source .venv/bin/activate
+          source /tmp/minigu-test-env/bin/activate
         fi
+        
+        # Upgrade pip and install required tools
         python -m pip install --upgrade pip
         pip install maturin
-    - name: Build Python extension with maturin
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Building Python extension..."
-        echo "Rust version: $(rustc --version)"
-        echo "Cargo version: $(cargo --version)"
-        echo "Python version: $(python --version)"
-        echo "Maturin version: $(maturin --version)"
-        echo "Current directory: $(pwd)"
-        echo "Files in current directory: $(ls -la)"
         
-        # Build the Python extension using maturin
-        # Use --release for better stability and avoid potential debug-mode issues
+        # Change to the Python module directory
+        cd minigu/python
+        
+        # Build the Rust extension
+        cargo build
+        
+        # Build and install the Python package using maturin
         maturin build --release
+        find ../../target/wheels -name "minigu*.whl" -exec pip install {} \;
         
-        # Find and install the built wheel
-        # Use Python to find the correct wheel file in a cross-platform way
-        python -c "
-import glob
-import os
-import subprocess
-
-wheel_files = glob.glob('../../target/wheels/minigu-*.whl')
-if wheel_files:
-    wheel_file = wheel_files[0]
-    print(f'Found wheel file: {wheel_file}')
-    subprocess.run(['pip', 'install', '--force-reinstall', wheel_file], check=True)
-    print(f'Installed wheel: {wheel_file}')
-else:
-    print('No wheel files found')
-    exit(1)
-"
-    - name: Run Python tests with detailed error handling
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Running Python API tests..."
-        echo "Python version: $(python --version)"
-        echo "Platform: $(python -c 'import platform; print(platform.platform())')"
-        echo "Current directory: $(pwd)"
-        echo "Files in current directory: $(ls -la)"
-        echo "Files in target directory: $(ls -la ../../target/debug/)"
-        echo "Attempting to import minigu_python module..."
-        python -c "import sys; print('Python path:', sys.path); import minigu_python; print('MiniGU module loaded successfully')"
-        echo "Importing MiniGU class..."
+        # Run tests in the isolated environment
+        python -c "import minigu_python; print('MiniGU module loaded successfully')"
         python -c "from minigu import MiniGU; print('MiniGU class imported successfully')"
-        echo "Importing AsyncMiniGU class..."
         python -c "from minigu import AsyncMiniGU; print('AsyncMiniGU class imported successfully')"
-        echo "Connecting to database..."
         python -c "import minigu; db = minigu.connect(); print('Connected to database successfully')"
-        echo "Running full test suite..."
-        if ! python test_minigu_api.py; then
-          echo "Python tests failed"
-          exit 1
-        fi
+        python test_minigu_api.py
 
   docs:
     name: Build Docs
