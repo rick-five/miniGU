@@ -169,8 +169,11 @@ jobs:
           source .venv/bin/activate
         fi
         echo "Running Python API tests..."
-        python -c "import sys; print('Python version:', sys.version)"
-        python -c "import platform; print('Platform:', platform.platform())"
+        echo "Python version: $(python --version)"
+        echo "Platform: $(python -c 'import platform; print(platform.platform())')"
+        echo "Current directory: $(pwd)"
+        echo "Files in current directory: $(ls -la)"
+        echo "Files in target directory: $(ls -la ../../target/debug/)"
         python -c "import minigu_python; print('MiniGU module loaded successfully')"
         python -c "from minigu import MiniGU; print('MiniGU class imported successfully')"
         python -c "from minigu import AsyncMiniGU; print('AsyncMiniGU class imported successfully')"
