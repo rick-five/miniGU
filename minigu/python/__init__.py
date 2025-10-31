@@ -1,10 +1,14 @@
 # Main module initialization file
+# Defer the import of the Rust extension to avoid segfaults during module initialization
+HAS_RUST_BINDINGS = False
+PyMiniGU = None
+
 try:
     import minigu_python
     HAS_RUST_BINDINGS = True
     PyMiniGU = minigu_python.PyMiniGU
-except ImportError:
-    # Fallback if the Rust extension is not available
+except (ImportError, Exception):
+    # Fallback if the Rust extension is not available or fails to load
     HAS_RUST_BINDINGS = False
     PyMiniGU = None
 

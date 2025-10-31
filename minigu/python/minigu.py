@@ -10,16 +10,22 @@ from pathlib import Path
 import json
 import asyncio
 
-# Import from package __init__.py with fallback for direct execution
+# Defer the import of the Rust extension to avoid segfaults during module initialization
+HAS_RUST_BINDINGS = False
+PyMiniGU = None
+
+# Try to import from the package first
 try:
-    from . import HAS_RUST_BINDINGS, PyMiniGU
-except ImportError:
+    from . import HAS_RUST_BINDINGS as LOCAL_HAS_RUST_BINDINGS, PyMiniGU as LOCAL_PyMiniGU
+    HAS_RUST_BINDINGS = LOCAL_HAS_RUST_BINDINGS
+    PyMiniGU = LOCAL_PyMiniGU
+except (ImportError, AttributeError):
     # Fallback when running directly
     try:
         import minigu_python
         HAS_RUST_BINDINGS = True
         PyMiniGU = minigu_python.PyMiniGU
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, Exception):
         HAS_RUST_BINDINGS = False
         PyMiniGU = None
 
