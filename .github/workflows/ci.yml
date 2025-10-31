@@ -154,11 +154,14 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Checking Python and Rust architecture consistency..."
-        PYTHON_ARCH=$(python -c "import platform; print(platform.machine())")
-        RUST_TARGET=$(rustc -vV | grep host | cut -d ' ' -f 2)
-        echo "Python architecture: $PYTHON_ARCH"
-        echo "Rust target: $RUST_TARGET"
+        echo "Runner Architecture:"
+        uname -m
+        echo "Python Interpreter Arch:"
+        python -c "import platform; print(platform.machine())"
+        echo "Python executable path:"
+        which python
+        echo "Python version:"
+        python --version
     - name: Build Python extension
       run: |
         cd minigu/python
@@ -168,7 +171,7 @@ jobs:
           source .venv/bin/activate
         fi
         echo "Building Python extension with maturin..."
-        maturin develop --release
+        python -m maturin develop --release
     - name: Run Python tests
       run: |
         cd minigu/python
