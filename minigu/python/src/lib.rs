@@ -4,14 +4,10 @@
 
 // 只导入最基本的模块，避免在模块加载时进行复杂操作
 use std::path::Path;
-
-use arrow::array::*;
-use arrow::datatypes::DataType;
-use minigu::common::data_chunk::DataChunk;
 use minigu::database::{Database, DatabaseConfig};
 use minigu::session::Session;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDict, PyList, PyString};
+use pyo3::types::{PyDict, PyList, PyString};
 
 // Define custom exception types
 #[pyfunction]
@@ -606,13 +602,10 @@ impl PyMiniGU {
 
     /// Get the error type for the last operation
     fn get_last_error_type(&self, e: &Bound<PyAny>) -> PyResult<String> {
-        // This is a placeholder - in a real implementation we would analyze the actual error
         let error_str: String = e.str()?.extract()?;
         Ok(error_str)
     }
 }
-
-/// Extract a value from an Arrow array at a specific index
 
 /// Python module definition
 #[pymodule]
