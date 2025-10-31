@@ -18,7 +18,8 @@ fn is_syntax_error(e: &Bound<PyAny>) -> PyResult<bool> {
     // For now, we'll do a simple string check, but in a real implementation
     // we would check the actual error type from the Rust side
     let error_str: String = e.str()?.extract()?;
-    Ok(error_str.to_lowercase().contains("syntax") || error_str.to_lowercase().contains("unexpected"))
+    Ok(error_str.to_lowercase().contains("syntax")
+        || error_str.to_lowercase().contains("unexpected"))
 }
 
 #[pyfunction]
@@ -36,7 +37,8 @@ fn is_transaction_error(e: &Bound<PyAny>) -> PyResult<bool> {
 #[pyfunction]
 fn is_not_implemented_error(e: &Bound<PyAny>) -> PyResult<bool> {
     let error_str: String = e.str()?.extract()?;
-    Ok(error_str.to_lowercase().contains("not implemented") || error_str.to_lowercase().contains("not yet implemented"))
+    Ok(error_str.to_lowercase().contains("not implemented")
+        || error_str.to_lowercase().contains("not yet implemented"))
 }
 
 /// PyMiniGU class that wraps the Rust Database
@@ -317,8 +319,9 @@ impl PyMiniGU {
         // Execute all batches
         for (batch_index, batch) in batch_statements.iter().enumerate() {
             // Create a transaction for this batch using correct GQL syntax
-            // Based on the test code, we should use BEGIN TRANSACTION instead of START TRANSACTION INTO
-            let transaction_query = format!("BEGIN TRANSACTION");
+            // Based on the test code, we should use BEGIN TRANSACTION instead of START TRANSACTION
+            // INTO
+            let transaction_query = "BEGIN TRANSACTION".to_string();
             session.query(&transaction_query).map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                     "Failed to begin transaction for batch {}: {}",
@@ -336,8 +339,8 @@ impl PyMiniGU {
             }
 
             // Commit the transaction
-            let commit_query = "COMMIT TRANSACTION";
-            session.query(commit_query).map_err(|e| {
+            let commit_query = "COMMIT TRANSACTION".to_string();
+            session.query(&commit_query).map_err(|e| {
                 PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                     "Failed to commit transaction for batch {}: {}",
                     batch_index, e
@@ -410,7 +413,7 @@ impl PyMiniGU {
                     "Failed to create graph '{}': {}",
                     sanitized_name, e
                 )))
-            },
+            }
         }
     }
 
@@ -559,7 +562,7 @@ impl PyMiniGU {
     /// Not yet implemented in Rust backend
     fn begin_transaction(&mut self) -> PyResult<()> {
         Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-            "Transaction functionality not yet implemented in Rust backend"
+            "Transaction functionality not yet implemented in Rust backend",
         ))
     }
 
@@ -567,7 +570,7 @@ impl PyMiniGU {
     /// Not yet implemented in Rust backend
     fn commit(&mut self) -> PyResult<()> {
         Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-            "Transaction functionality not yet implemented in Rust backend"
+            "Transaction functionality not yet implemented in Rust backend",
         ))
     }
 
@@ -575,10 +578,10 @@ impl PyMiniGU {
     /// Not yet implemented in Rust backend
     fn rollback(&mut self) -> PyResult<()> {
         Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-            "Transaction functionality not yet implemented in Rust backend"
+            "Transaction functionality not yet implemented in Rust backend",
         ))
     }
-    
+
     /// Get the error type for the last operation
     fn get_last_error_type(&self, e: &Bound<PyAny>) -> PyResult<String> {
         // This is a placeholder - in a real implementation we would analyze the actual error
