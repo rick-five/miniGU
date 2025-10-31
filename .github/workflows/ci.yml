@@ -147,7 +147,7 @@ jobs:
         fi
         python -m pip install --upgrade pip
         pip install maturin
-    - name: Build Python extension with specific options
+    - name: Build Python extension with maturin
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -162,12 +162,20 @@ jobs:
         echo "Maturin version: $(maturin --version)"
         echo "Current directory: $(pwd)"
         echo "Files in current directory: $(ls -la)"
-        echo "Environment variables:"
-        env
+        
         # Build the core module first to ensure all dependencies are available
         cargo build
-        # Then build the Python extension with specific options to avoid segfaults
-        maturin develop --release
+        
+        # Use maturin build to create wheel package
+        maturin build
+        
+        # Install the built wheel package
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          WHEEL_FILE=$(ls ../../target/wheels/minigu-*.whl | head -n 1)
+        else
+          WHEEL_FILE=$(ls ../../target/wheels/minigu-*.whl | head -n 1)
+        fi
+        pip install --force-reinstall "$WHEEL_FILE"
     - name: Run Python tests with detailed error handling
       run: |
         cd minigu/python
