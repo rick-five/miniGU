@@ -48,7 +48,7 @@ pub struct PyMiniGU {
     #[pyo3(get)]
     database: Option<bool>, // 使用标志而非直接存储数据库实例
     #[pyo3(get)]
-    session: Option<bool>,  // 使用标志而非直接存储会话实例
+    session: Option<bool>, // 使用标志而非直接存储会话实例
     current_graph: Option<String>, // Track current graph name
 }
 
@@ -76,7 +76,7 @@ impl PyMiniGU {
 
         println!("Initializing database...");
         let config = DatabaseConfig::default();
-        
+
         // Try to initialize database and session, but handle errors gracefully
         match Database::open_in_memory(&config) {
             Ok(_db) => {
@@ -89,20 +89,16 @@ impl PyMiniGU {
                         println!("Session initialized successfully");
                         Ok(())
                     }
-                    Err(e) => {
-                        Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                            "Failed to create session: {}",
-                            e
-                        )))
-                    }
+                    Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                        "Failed to create session: {}",
+                        e
+                    ))),
                 }
             }
-            Err(e) => {
-                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to initialize database: {}",
-                    e
-                )))
-            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to initialize database: {}",
+                e
+            ))),
         }
     }
 
@@ -126,7 +122,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -238,7 +234,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -297,7 +293,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -356,7 +352,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -406,7 +402,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -422,18 +418,16 @@ impl PyMiniGU {
             "CALL export('{}', '{}', 'manifest.json')",
             graph_name, sanitized_path
         );
-        
+
         match session.query(&query) {
             Ok(_) => {
                 println!("Database saved successfully to: {}", file_path);
                 Ok(())
             }
-            Err(e) => {
-                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to save database: {}",
-                    e
-                )))
-            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to save database: {}",
+                e
+            ))),
         }
     }
 
@@ -475,7 +469,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -543,7 +537,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -608,7 +602,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -640,7 +634,7 @@ impl PyMiniGU {
                 "Session not initialized. Call init() first.",
             ));
         }
-        
+
         // Create a temporary session for this operation
         let config = DatabaseConfig::default();
         let db = match Database::open_in_memory(&config) {
@@ -652,7 +646,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -662,7 +656,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         // Execute BEGIN TRANSACTION statement using correct GQL syntax
         let query = "BEGIN TRANSACTION";
         match session.query(query) {
@@ -670,12 +664,10 @@ impl PyMiniGU {
                 println!("Transaction begun successfully");
                 Ok(())
             }
-            Err(e) => {
-                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to begin transaction: {}",
-                    e
-                )))
-            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to begin transaction: {}",
+                e
+            ))),
         }
     }
 
@@ -687,7 +679,7 @@ impl PyMiniGU {
                 "Session not initialized. Call init() first.",
             ));
         }
-        
+
         // Create a temporary session for this operation
         let config = DatabaseConfig::default();
         let db = match Database::open_in_memory(&config) {
@@ -699,7 +691,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -709,17 +701,15 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         // Execute COMMIT TRANSACTION statement using correct GQL syntax
         let query = "COMMIT TRANSACTION";
         match session.query(query) {
             Ok(_) => Ok(()),
-            Err(e) => {
-                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to commit transaction: {}",
-                    e
-                )))
-            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to commit transaction: {}",
+                e
+            ))),
         }
     }
 
@@ -731,7 +721,7 @@ impl PyMiniGU {
                 "Session not initialized. Call init() first.",
             ));
         }
-        
+
         // Create a temporary session for this operation
         let config = DatabaseConfig::default();
         let db = match Database::open_in_memory(&config) {
@@ -743,7 +733,7 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
@@ -753,17 +743,15 @@ impl PyMiniGU {
                 )));
             }
         };
-        
+
         // Execute ROLLBACK TRANSACTION statement using correct GQL syntax
         let query = "ROLLBACK TRANSACTION";
         match session.query(query) {
             Ok(_) => Ok(()),
-            Err(e) => {
-                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                    "Failed to rollback transaction: {}",
-                    e
-                )))
-            }
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                "Failed to rollback transaction: {}",
+                e
+            ))),
         }
     }
 
