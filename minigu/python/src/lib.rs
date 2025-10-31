@@ -613,30 +613,25 @@ impl PyMiniGU {
 fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // 只注册最基本的类和函数，避免在模块加载时执行任何复杂操作
     // 使用更安全的错误处理方式
-    m.add_class::<PyMiniGU>()
-        .map_err(|e| {
-            eprintln!("Failed to add PyMiniGU class: {:?}", e);
-            e
-        })?;
-        
+    m.add_class::<PyMiniGU>().map_err(|e| {
+        eprintln!("Failed to add PyMiniGU class: {:?}", e);
+        e
+    })?;
     m.add_function(wrap_pyfunction!(is_syntax_error, m)?)
         .map_err(|e| {
             eprintln!("Failed to add is_syntax_error function: {:?}", e);
             e
         })?;
-        
     m.add_function(wrap_pyfunction!(is_timeout_error, m)?)
         .map_err(|e| {
             eprintln!("Failed to add is_timeout_error function: {:?}", e);
             e
         })?;
-        
     m.add_function(wrap_pyfunction!(is_transaction_error, m)?)
         .map_err(|e| {
             eprintln!("Failed to add is_transaction_error function: {:?}", e);
             e
         })?;
-        
     m.add_function(wrap_pyfunction!(is_not_implemented_error, m)?)
         .map_err(|e| {
             eprintln!("Failed to add is_not_implemented_error function: {:?}", e);
