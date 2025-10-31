@@ -165,7 +165,7 @@ jobs:
         echo "Environment variables:"
         env
         # Build the core module first to ensure all dependencies are available
-        cargo build --verbose
+        cargo build
         # Then build the Python extension with specific options to avoid segfaults
         maturin develop --release
     - name: Run Python tests with detailed error handling
