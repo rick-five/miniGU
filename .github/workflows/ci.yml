@@ -183,52 +183,13 @@ jobs:
         echo "Files in current directory: $(ls -la)"
         echo "Files in target directory: $(ls -la ../../target/debug/)"
         echo "Attempting to import minigu_python module..."
-        python -c "
-import sys
-print('Python path:', sys.path)
-try:
-    import minigu_python
-    print('MiniGU module loaded successfully')
-except Exception as e:
-    print('Failed to import minigu_python:', e)
-    import traceback
-    traceback.print_exc()
-    exit(1)
-"
+        python -c "import sys; print('Python path:', sys.path); import minigu_python; print('MiniGU module loaded successfully')"
         echo "Importing MiniGU class..."
-        python -c "
-try:
-    from minigu import MiniGU
-    print('MiniGU class imported successfully')
-except Exception as e:
-    print('Failed to import MiniGU class:', e)
-    import traceback
-    traceback.print_exc()
-    exit(1)
-"
+        python -c "from minigu import MiniGU; print('MiniGU class imported successfully')"
         echo "Importing AsyncMiniGU class..."
-        python -c "
-try:
-    from minigu import AsyncMiniGU
-    print('AsyncMiniGU class imported successfully')
-except Exception as e:
-    print('Failed to import AsyncMiniGU class:', e)
-    import traceback
-    traceback.print_exc()
-    exit(1)
-"
+        python -c "from minigu import AsyncMiniGU; print('AsyncMiniGU class imported successfully')"
         echo "Connecting to database..."
-        python -c "
-try:
-    import minigu
-    db = minigu.connect()
-    print('Connected to database successfully')
-except Exception as e:
-    print('Failed to connect to database:', e)
-    import traceback
-    traceback.print_exc()
-    exit(1)
-"
+        python -c "import minigu; db = minigu.connect(); print('Connected to database successfully')"
         echo "Running full test suite..."
         if ! python test_minigu_api.py; then
           echo "Python tests failed"
