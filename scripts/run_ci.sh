@@ -35,9 +35,32 @@ else
     PYTHON_CMD=python
 fi
 
-echo "Attempting to run Python tests directly..."
+# Create virtual environment and install dependencies to avoid segmentation fault
+echo "Setting up virtual environment..."
+$PYTHON_CMD -m venv .venv
+source .venv/bin/activate || source .venv/Scripts/activate
+
+# Upgrade pip and install maturin
+pip install --upgrade pip
+pip install maturin
+
+# Build Python wheel using maturin to ensure proper linking
+echo "Building Python wheel with maturin..."
+maturin build
+
+# Install the built wheel
+WHEEL_FILE=$(ls ../../target/wheels/minigu-*.whl | head -n 1)
+if [ -n "$WHEEL_FILE" ]; then
+    pip install --force-reinstall "$WHEEL_FILE"
+    echo "Installed wheel: $WHEEL_FILE"
+else
+    echo "No wheel file found"
+    exit 1
+fi
+
+echo "Attempting to run Python tests..."
 # Run Python tests with error handling
-if ! $PYTHON_CMD test_minigu_api.py; then
+if ! python test_minigu_api.py; then
     echo "Python tests failed"
     exit 1
 fi
