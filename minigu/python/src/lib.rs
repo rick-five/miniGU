@@ -55,6 +55,7 @@ impl PyMiniGU {
     /// Create a new PyMiniGU instance
     #[new]
     fn new() -> PyResult<Self> {
+        // Only initialize fields to None, don't create database or session yet
         Ok(PyMiniGU {
             database: None,
             session: None,
@@ -64,6 +65,11 @@ impl PyMiniGU {
 
     /// Initialize the database
     fn init(&mut self) -> PyResult<()> {
+        // Check if already initialized
+        if self.database.is_some() && self.session.is_some() {
+            return Ok(());
+        }
+        
         let config = DatabaseConfig::default();
         let db = Database::open_in_memory(&config).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
@@ -87,6 +93,7 @@ impl PyMiniGU {
         self.database = Some(db);
         self.session = Some(session);
         self.current_graph = None;
+        println!("Session initialized successfully");
         Ok(())
     }
 
