@@ -156,7 +156,7 @@ jobs:
         fi
         echo "Building Python extension..."
         # Build the core module first to ensure all dependencies are available
-        cargo build --features ${{ env.DEFAULT_FEATURES }}
+        cargo build
         # Then build the Python extension
         maturin develop
     - name: Run Python tests
