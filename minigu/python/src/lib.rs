@@ -93,7 +93,9 @@ impl PyMiniGU {
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Execute the query
         let query_result = session.query(query_str).map_err(|e| {
@@ -192,7 +194,9 @@ impl PyMiniGU {
     /// Load data directly with batch support
     fn load_data(&mut self, data: &Bound<'_, PyAny>) -> PyResult<()> {
         // Get the session
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Convert Python data to Rust data structures
         let list = data.downcast::<PyList>().map_err(|_| {
@@ -385,7 +389,9 @@ impl PyMiniGU {
     /// Create a new graph
     #[pyo3(signature = (graph_name, _schema = None))]
     fn create_graph(&mut self, graph_name: &str, _schema: Option<&str>) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -495,7 +501,9 @@ impl PyMiniGU {
 
     /// Drop a graph
     fn drop_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        let session = self.session.as_mut().expect("Session not initialized");
+        let session = self.session.as_mut().ok_or_else(|| {
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+        })?;
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -594,7 +602,15 @@ impl PyMiniGU {
 fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject> {
     Python::with_gil(|py| match array.data_type() {
         DataType::Int32 => {
-            let arr = array.as_any().downcast_ref::<Int32Array>().unwrap();
+            let arr = match array.as_any().downcast_ref::<Int32Array>() {
+                Some(a) => a,
+                None => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Internal Error: Expected Int32 array but got {:?}",
+                        array.data_type()
+                    )));
+                }
+            };
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
@@ -602,7 +618,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
             }
         }
         DataType::Utf8 => {
-            let arr = array.as_any().downcast_ref::<StringArray>().unwrap();
+            let arr = match array.as_any().downcast_ref::<StringArray>() {
+                Some(a) => a,
+                None => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Internal Error: Expected Utf8 array but got {:?}",
+                        array.data_type()
+                    )));
+                }
+            };
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
@@ -610,7 +634,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
             }
         }
         DataType::Boolean => {
-            let arr = array.as_any().downcast_ref::<BooleanArray>().unwrap();
+            let arr = match array.as_any().downcast_ref::<BooleanArray>() {
+                Some(a) => a,
+                None => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Internal Error: Expected Boolean array but got {:?}",
+                        array.data_type()
+                    )));
+                }
+            };
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
@@ -623,7 +655,15 @@ fn extract_value_from_array(array: &ArrayRef, index: usize) -> PyResult<PyObject
             }
         }
         DataType::Float64 => {
-            let arr = array.as_any().downcast_ref::<Float64Array>().unwrap();
+            let arr = match array.as_any().downcast_ref::<Float64Array>() {
+                Some(a) => a,
+                None => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                        "Internal Error: Expected Float64 array but got {:?}",
+                        array.data_type()
+                    )));
+                }
+            };
             if arr.is_null(index) {
                 Ok(py.None())
             } else {
