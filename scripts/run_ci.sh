@@ -43,12 +43,15 @@ else
 fi
 
 # Check architecture consistency
-echo "Checking Python and Rust architecture consistency..."
-PYTHON_ARCH=$($PYTHON_CMD -c "import platform; print(platform.machine())")
-RUST_TARGET=$(rustc -vV | grep host | cut -d ' ' -f 2)
-
-echo "Python architecture: $PYTHON_ARCH"
-echo "Rust target: $RUST_TARGET"
+echo "Checking system and Python architecture consistency..."
+echo "Runner Architecture:"
+uname -m
+echo "Python Interpreter Arch:"
+python -c "import platform; print(platform.machine())"
+echo "Python executable path:"
+which python
+echo "Python version:"
+python --version
 
 # Upgrade pip and install required packages
 echo "Installing required packages..."
@@ -57,7 +60,7 @@ pip install maturin pytest
 
 # Build the Python extension module using maturin (方式一)
 echo "Building Python extension module with maturin..."
-maturin develop --release
+python -m maturin develop --release
 
 echo "Attempting to run Python tests..."
 python -m pytest test_minigu_api.py -v
