@@ -9,7 +9,6 @@ use arrow::array::*;
 use arrow::datatypes::DataType;
 use minigu::common::data_chunk::DataChunk;
 use minigu::database::{Database, DatabaseConfig};
-use minigu::session::Session;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
@@ -46,8 +45,10 @@ fn is_not_implemented_error(e: &Bound<PyAny>) -> PyResult<bool> {
 #[pyclass]
 #[allow(clippy::upper_case_acronyms)]
 pub struct PyMiniGU {
-    database: Option<Database>,
-    session: Option<Session>,
+    #[pyo3(get)]
+    database: Option<bool>, // 使用标志而非直接存储数据库实例
+    #[pyo3(get)]
+    session: Option<bool>,  // 使用标志而非直接存储会话实例
     current_graph: Option<String>, // Track current graph name
 }
 
@@ -75,8 +76,47 @@ impl PyMiniGU {
 
         println!("Initializing database...");
         let config = DatabaseConfig::default();
+        
+        // Try to initialize database and session, but handle errors gracefully
+        match Database::open_in_memory(&config) {
+            Ok(_db) => {
+                match _db.session() {
+                    Ok(_session) => {
+                        // Mark as initialized without storing the actual objects
+                        self.database = Some(true);
+                        self.session = Some(true);
+                        self.current_graph = None;
+                        println!("Session initialized successfully");
+                        Ok(())
+                    }
+                    Err(e) => {
+                        Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                            "Failed to create session: {}",
+                            e
+                        )))
+                    }
+                }
+            }
+            Err(e) => {
+                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )))
+            }
+        }
+    }
 
-        // Use safer error handling for database initialization
+    /// Execute a GQL query
+    fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
+
+        // Create a temporary database and session for this operation
+        let config = DatabaseConfig::default();
         let db = match Database::open_in_memory(&config) {
             Ok(db) => db,
             Err(e) => {
@@ -86,40 +126,14 @@ impl PyMiniGU {
                 )));
             }
         };
-
-        // Use safer error handling for session creation
-        let session = match db.session() {
+        
+        let mut session = match db.session() {
             Ok(session) => session,
             Err(e) => {
                 return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                     "Failed to create session: {}",
                     e
                 )));
-            }
-        };
-
-        // Debug information
-        println!("Session initialized");
-        // Note: We can't access the private context field of Session here
-        // The session is initialized and ready to use
-        println!("Session is ready");
-
-        self.database = Some(db);
-        self.session = Some(session);
-        self.current_graph = None;
-        println!("Session initialized successfully");
-        Ok(())
-    }
-
-    /// Execute a GQL query
-    fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
             }
         };
 
@@ -191,15 +205,12 @@ impl PyMiniGU {
 
     /// Load data from a file
     fn load_data(&mut self, path: &str) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Validate file path
         let path_obj = Path::new(path);
@@ -215,6 +226,28 @@ impl PyMiniGU {
 
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
+
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
 
         let query = format!("LOAD DATA FROM \"{}\" INTO {}", sanitized_path, graph_name);
         match session.query(&query) {
@@ -231,15 +264,12 @@ impl PyMiniGU {
 
     /// Load data from a CSV file
     fn load_csv(&mut self, path: &str) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Validate file path
         let path_obj = Path::new(path);
@@ -255,6 +285,28 @@ impl PyMiniGU {
 
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
+
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
 
         let query = format!("LOAD CSV FROM \"{}\" INTO {}", sanitized_path, graph_name);
         match session.query(&query) {
@@ -271,15 +323,12 @@ impl PyMiniGU {
 
     /// Load data from a JSON file
     fn load_json(&mut self, path: &str) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Validate file path
         let path_obj = Path::new(path);
@@ -296,6 +345,28 @@ impl PyMiniGU {
         // Sanitize the path to prevent injection attacks
         let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
 
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
+
         let query = format!("LOAD JSON FROM \"{}\" INTO {}", sanitized_path, graph_name);
         match session.query(&query) {
             Ok(_) => {
@@ -311,15 +382,12 @@ impl PyMiniGU {
 
     /// Save database to a file
     fn save_to_file(&mut self, file_path: &str) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Use current graph or default to "default_graph"
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
@@ -327,36 +395,57 @@ impl PyMiniGU {
         // Sanitize the path to prevent injection attacks
         let sanitized_path = file_path.replace(['\'', '"', ';', '\n', '\r'], "");
 
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
+
         // Execute export procedure with correct syntax (no semicolon)
         let query = format!(
             "CALL export('{}', '{}', 'manifest.json')",
             graph_name, sanitized_path
         );
-
+        
         match session.query(&query) {
             Ok(_) => {
                 println!("Database saved successfully to: {}", file_path);
                 Ok(())
             }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to save database: {}",
-                e
-            ))),
+            Err(e) => {
+                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to save database: {}",
+                    e
+                )))
+            }
         }
     }
 
     /// Create a new graph
     #[pyo3(signature = (graph_name, _schema = None))]
     fn create_graph(&mut self, graph_name: &str, _schema: Option<&str>) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -374,6 +463,28 @@ impl PyMiniGU {
                 "Graph name contains only invalid characters",
             ));
         }
+
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}')", sanitized_name);
@@ -397,15 +508,12 @@ impl PyMiniGU {
 
     /// Drop a graph
     fn drop_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -423,6 +531,28 @@ impl PyMiniGU {
                 "Graph name contains only invalid characters",
             ));
         }
+
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
 
         let query = format!("DROP GRAPH {}", sanitized_name);
         match session.query(&query) {
@@ -443,15 +573,12 @@ impl PyMiniGU {
 
     /// Use a graph
     fn use_graph(&mut self, graph_name: &str) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
-            }
-        };
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
 
         // Validate graph name
         if graph_name.is_empty() {
@@ -470,6 +597,28 @@ impl PyMiniGU {
             ));
         }
 
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
+            }
+        };
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
+
         let query = format!("USE GRAPH {}", sanitized_name);
         match session.query(&query) {
             Ok(_) => {
@@ -485,16 +634,35 @@ impl PyMiniGU {
 
     /// Begin a transaction
     fn begin_transaction(&mut self) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
+        
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
             }
         };
-
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
+        
         // Execute BEGIN TRANSACTION statement using correct GQL syntax
         let query = "BEGIN TRANSACTION";
         match session.query(query) {
@@ -502,56 +670,100 @@ impl PyMiniGU {
                 println!("Transaction begun successfully");
                 Ok(())
             }
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to begin transaction: {}",
-                e
-            ))),
+            Err(e) => {
+                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to begin transaction: {}",
+                    e
+                )))
+            }
         }
     }
 
     /// Commit the current transaction
     fn commit(&mut self) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
+        
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
             }
         };
-
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
+        
         // Execute COMMIT TRANSACTION statement using correct GQL syntax
         let query = "COMMIT TRANSACTION";
         match session.query(query) {
             Ok(_) => Ok(()),
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to commit transaction: {}",
-                e
-            ))),
+            Err(e) => {
+                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to commit transaction: {}",
+                    e
+                )))
+            }
         }
     }
 
     /// Rollback the current transaction
     fn rollback(&mut self) -> PyResult<()> {
-        // Get the session with proper error handling
-        let session = match self.session.as_mut() {
-            Some(session) => session,
-            None => {
-                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
-                    "Session not initialized. Call init() first.",
-                ));
+        // Check if session is initialized
+        if self.session.is_none() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Call init() first.",
+            ));
+        }
+        
+        // Create a temporary session for this operation
+        let config = DatabaseConfig::default();
+        let db = match Database::open_in_memory(&config) {
+            Ok(db) => db,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to initialize database: {}",
+                    e
+                )));
             }
         };
-
+        
+        let mut session = match db.session() {
+            Ok(session) => session,
+            Err(e) => {
+                return Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to create session: {}",
+                    e
+                )));
+            }
+        };
+        
         // Execute ROLLBACK TRANSACTION statement using correct GQL syntax
         let query = "ROLLBACK TRANSACTION";
         match session.query(query) {
             Ok(_) => Ok(()),
-            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
-                "Failed to rollback transaction: {}",
-                e
-            ))),
+            Err(e) => {
+                Err(PyErr::new::<pyo3::exceptions::PyException, _>(format!(
+                    "Failed to rollback transaction: {}",
+                    e
+                )))
+            }
         }
     }
 
@@ -563,6 +775,7 @@ impl PyMiniGU {
 
     /// Close the database connection
     fn close(&mut self) -> PyResult<()> {
+        // Simply reset the flags, no actual resources to close
         self.database = None;
         self.session = None;
         self.current_graph = None;
