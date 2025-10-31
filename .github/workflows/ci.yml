@@ -170,7 +170,7 @@ jobs:
         python -c "import minigu; print('MiniGU module loaded successfully')"
         python -c "from minigu import MiniGU; print('MiniGU class imported successfully')"
         python -c "from minigu import AsyncMiniGU; print('AsyncMiniGU class imported successfully')"
-        python -c "db = minigu.connect(); print('Connected to database successfully')"
+        python -c "import minigu; db = minigu.connect(); print('Connected to database successfully')"
         python test_minigu_api.py
 
   docs:
