@@ -163,19 +163,27 @@ jobs:
         echo "Current directory: $(pwd)"
         echo "Files in current directory: $(ls -la)"
         
-        # Build the core module first to ensure all dependencies are available
-        cargo build
+        # Build the Python extension using maturin
+        # Use --release for better stability and avoid potential debug-mode issues
+        maturin build --release
         
-        # Use maturin build to create wheel package
-        maturin build
-        
-        # Install the built wheel package
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          WHEEL_FILE=$(ls ../../target/wheels/minigu-*.whl | head -n 1)
-        else
-          WHEEL_FILE=$(ls ../../target/wheels/minigu-*.whl | head -n 1)
-        fi
-        pip install --force-reinstall "$WHEEL_FILE"
+        # Find and install the built wheel
+        # Use Python to find the correct wheel file in a cross-platform way
+        python -c "
+import glob
+import os
+import subprocess
+
+wheel_files = glob.glob('../../target/wheels/minigu-*.whl')
+if wheel_files:
+    wheel_file = wheel_files[0]
+    print(f'Found wheel file: {wheel_file}')
+    subprocess.run(['pip', 'install', '--force-reinstall', wheel_file], check=True)
+    print(f'Installed wheel: {wheel_file}')
+else:
+    print('No wheel files found')
+    exit(1)
+"
     - name: Run Python tests with detailed error handling
       run: |
         cd minigu/python
