@@ -56,6 +56,7 @@ impl PyMiniGU {
     #[new]
     fn new() -> PyResult<Self> {
         // Only initialize fields to None, don't create database or session yet
+        // This is critical to prevent segfaults during module import
         Ok(PyMiniGU {
             database: None,
             session: None,
@@ -67,9 +68,11 @@ impl PyMiniGU {
     fn init(&mut self) -> PyResult<()> {
         // Check if already initialized
         if self.database.is_some() && self.session.is_some() {
+            println!("Database already initialized");
             return Ok(());
         }
 
+        println!("Initializing database...");
         let config = DatabaseConfig::default();
         let db = Database::open_in_memory(&config).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
