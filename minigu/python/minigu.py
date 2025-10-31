@@ -191,10 +191,16 @@ class _BaseMiniGU:
             try:
                 if HAS_RUST_BINDINGS and PyMiniGU:
                     self._rust_instance = PyMiniGU()
-                    self._rust_instance.init()
-                    self.is_connected = True
-                    print("Session initialized successfully")
-                    print("Database connected")
+                    # 使用更安全的方式调用init方法，避免段错误
+                    try:
+                        self._rust_instance.init()
+                        self.is_connected = True
+                        print("Session initialized successfully")
+                        print("Database connected")
+                    except Exception as init_error:
+                        print(f"Warning: Failed to initialize database: {init_error}")
+                        # 即使初始化失败，也创建实例以避免段错误
+                        self.is_connected = False
                 else:
                     raise RuntimeError("Rust bindings not available")
             except Exception as e:
@@ -207,7 +213,10 @@ class _BaseMiniGU:
         This method closes the connection to the database and releases any resources.
         """
         if self._rust_instance:
-            self._rust_instance.close()
+            try:
+                self._rust_instance.close()
+            except Exception as e:
+                print(f"Warning: Error closing database connection: {e}")
         self.is_connected = False
     
     @property
