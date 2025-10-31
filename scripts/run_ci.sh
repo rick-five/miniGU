@@ -62,6 +62,34 @@ pip install maturin pytest
 echo "Building Python extension module with maturin..."
 python -m maturin develop --release
 
+# Diagnostic step: Create a minimal test script and run it
+echo "Running minimal import test..."
+cat > minimal_test.py <<EOF
+import sys
+print("Python executable:", sys.executable)
+print("Python path:", sys.path)
+
+try:
+    import minigu_python
+    print("SUCCESS: minigu_python imported successfully.")
+    # Try to instantiate PyMiniGU to ensure class registration also works
+    try:
+        db = minigu_python.PyMiniGU()
+        print("SUCCESS: PyMiniGU instantiated.")
+    except Exception as e:
+        print(f"FAILURE: Instantiation failed with error: {e}")
+        import traceback
+        traceback.print_exc()
+except Exception as e:
+    print(f"FAILURE: Import failed with error: {e}")
+    import traceback
+    traceback.print_exc()
+EOF
+
+# Use VENV Python to run the script
+echo "Executing minimal test..."
+python minimal_test.py
+
 echo "Attempting to run Python tests..."
 python -m pytest test_minigu_api.py -v
 echo "Python API tests completed."
