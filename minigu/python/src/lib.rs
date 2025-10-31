@@ -69,7 +69,7 @@ impl PyMiniGU {
         if self.database.is_some() && self.session.is_some() {
             return Ok(());
         }
-        
+
         let config = DatabaseConfig::default();
         let db = Database::open_in_memory(&config).map_err(|e| {
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
