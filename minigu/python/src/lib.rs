@@ -55,28 +55,42 @@ impl PyMiniGU {
     /// Create a new PyMiniGU instance
     #[new]
     fn new() -> PyResult<Self> {
-        Ok(PyMiniGU {
+        println!("PyMiniGU::new() called - starting instantiation");
+        
+        let instance = PyMiniGU {
             database: None,
             session: None,
             current_graph: None,
-        })
+        };
+        
+        println!("PyMiniGU::new() completed - instance created");
+        Ok(instance)
     }
 
     /// Initialize the database
     fn init(&mut self) -> PyResult<()> {
+        println!("PyMiniGU::init() called - starting initialization");
+        
         let config = DatabaseConfig::default();
+        println!("DatabaseConfig created");
+
         let db = Database::open_in_memory(&config).map_err(|e| {
+            println!("Failed to open in-memory database: {}", e);
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to initialize database: {}",
                 e
             ))
         })?;
+        println!("In-memory database opened");
+
         let session = db.session().map_err(|e| {
+            println!("Failed to create session: {}", e);
             PyErr::new::<pyo3::exceptions::PyException, _>(format!(
                 "Failed to create session: {}",
                 e
             ))
         })?;
+        println!("Session created");
 
         // Debug information
         println!("Session initialized");
@@ -87,6 +101,8 @@ impl PyMiniGU {
         self.database = Some(db);
         self.session = Some(session);
         self.current_graph = None;
+        
+        println!("PyMiniGU::init() completed - initialization finished");
         Ok(())
     }
 
