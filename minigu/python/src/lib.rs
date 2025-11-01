@@ -56,13 +56,13 @@ impl PyMiniGU {
     #[new]
     fn new() -> PyResult<Self> {
         println!("PyMiniGU::new() called - starting instantiation");
-        
+
         let instance = PyMiniGU {
             database: None,
             session: None,
             current_graph: None,
         };
-        
+
         println!("PyMiniGU::new() completed - instance created");
         Ok(instance)
     }
@@ -70,7 +70,7 @@ impl PyMiniGU {
     /// Initialize the database
     fn init(&mut self) -> PyResult<()> {
         println!("PyMiniGU::init() called - starting initialization");
-        
+
         let config = DatabaseConfig::default();
         println!("DatabaseConfig created");
 
@@ -101,7 +101,7 @@ impl PyMiniGU {
         self.database = Some(db);
         self.session = Some(session);
         self.current_graph = None;
-        
+
         println!("PyMiniGU::init() completed - initialization finished");
         Ok(())
     }
