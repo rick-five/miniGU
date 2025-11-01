@@ -1,9 +1,10 @@
 [build-system]
-build-backend = "maturin"
 requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
-authors = [{ name = "miniGU Team" }]
+name = "minigu-python"
+requires-python = ">=3.7"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -16,11 +17,12 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
 ]
+dynamic = ["version"]
 description = "A graph database for learning purposes"
-name = "minigu"
-requires-python = ">=3.7"
-version = "0.1.0"
+authors = [{ name = "miniGU Team" }]
 
 [project.urls]
 Homepage = "https://github.com/TuGraph-family/miniGU"
@@ -28,5 +30,9 @@ Repository = "https://github.com/TuGraph-family/miniGU"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
-module-name = "minigu.minigu_python"
+module-name = "minigu_python.minigu_python"
 python-source = "minigu"
+
+[tool.maturin.target."aarch64-apple-darwin"]
+# macOS特定配置
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]

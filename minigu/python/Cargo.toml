@@ -20,5 +20,8 @@ pyo3-build-config = "0.24.2"
 [features]
 extension-module = ["pyo3/extension-module"]
 
+[target.'cfg(target_os = "macos")'.build]
+rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
 [lints]
 workspace = true
