@@ -226,7 +226,25 @@ jobs:
           fi
           echo "Skipping Python tests due to segmentation fault issues on macOS ARM64"
           echo "Will only verify that the module can be imported without crashing"
-          python -c "import minigu" && echo "SUCCESS: minigu module imported without immediate crash." || echo "FAILURE: Could not import minigu module."
+          
+          echo "--- Enhanced diagnostics for import failure ---"
+          python -c "import traceback, sys; \
+          try: \
+              print('Attempting to import minigu module...'); \
+              import minigu; \
+              print('SUCCESS: minigu module imported without immediate crash.'); \
+          except Exception as e: \
+              print('FAILURE: Exception during minigu import:'); \
+              print('Exception type:', type(e).__name__); \
+              print('Exception message:', str(e)); \
+              traceback.print_exc(); \
+              sys.exit(1); \
+          except BaseException as e: \
+              print('FAILURE: BaseException during minigu import:'); \
+              print('Exception type:', type(e).__name__); \
+              print('Exception message:', str(e)); \
+              traceback.print_exc(); \
+              sys.exit(1)" || echo "FAILURE: Segmentation fault or other signal received during minigu import"
 
   docs:
     name: Build Docs
