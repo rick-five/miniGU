@@ -189,13 +189,29 @@ jobs:
           python -m maturin develop --verbose
       - name: Verify minigu module import
         run: |
+          # 进入 minigu/python 目录
           cd minigu/python
+          # 激活 Python 虚拟环境
           if [ "$RUNNER_OS" == "Windows" ]; then
             source .venv/Scripts/activate
           else
             source .venv/bin/activate
           fi
 
+          echo "--- Diagnostic information ---"
+          echo "Runner Architecture:"
+          uname -m || echo "uname not available"
+          echo "Python Interpreter Arch:"
+          python -c "import platform; print(platform.machine())"
+          echo "Python Executable Path:"
+          which python || echo "which python failed"
+          echo "Python Version:"
+          python --version
+          echo "Rust Target:"
+          rustc -vV | grep host || echo "rustc info not available"
+          echo "Environment variables:"
+          env | grep -E "(PY|PYTHON)" || echo "No PY* or PYTHON* environment variables"
+          
           echo "--- Attempting to import 'minigu' module ---"
           python -c 'import minigu' && echo "SUCCESS: minigu module imported without immediate crash." || echo "FAILURE: Could not import minigu module. Check maturin build output for warnings/errors."
 
