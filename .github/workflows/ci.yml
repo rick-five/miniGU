@@ -1,10 +1,11 @@
+---
 name: CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,178 +27,234 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
-    - uses: crate-ci/typos@v1.29.4
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1.29.4
 
   toml:
     name: TOML Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: taiki-e/install-action@v2
-      with:
-        tool: taplo-cli@0.9.3
-    - run: taplo fmt --check --diff
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: taplo-cli@0.9.3
+      - run: taplo fmt --check --diff
 
   fmt:
     name: Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - run: cargo fmt --check
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo fmt --check
 
   clippy:
     name: Clippy Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - run: cargo clippy --tests --features ${{ env.DEFAULT_FEATURES }} --no-deps
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo clippy --tests --features ${{ env.DEFAULT_FEATURES }} --no-deps
 
   machete:
     name: Machete Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: bnjbvr/cargo-machete@main
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: bnjbvr/cargo-machete@main
 
   deny:
     name: Deny Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v4
-    - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
 
   build:
-    needs: [ typos, toml, fmt, clippy, machete, deny ]
+    needs: [typos, toml, fmt, clippy, machete, deny]
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: Swatinem/rust-cache@v2
-    - run: cargo build --features ${{ env.DEFAULT_FEATURES }}
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --features ${{ env.DEFAULT_FEATURES }}
 
   build_no_std:
-    needs: [ typos, toml, fmt, clippy, machete, deny ]
+    needs: [typos, toml, fmt, clippy, machete, deny]
     name: Build gql-parser in no_std mode
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - run: rustup target add aarch64-unknown-none
-    - uses: Swatinem/rust-cache@v2
-    - run: cargo build -p gql-parser --target aarch64-unknown-none --no-default-features
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: rustup target add aarch64-unknown-none
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p gql-parser --target aarch64-unknown-none --no-default-features
 
   test:
-    needs: [ typos, toml, fmt, clippy, machete, deny ]
+    needs: [typos, toml, fmt, clippy, machete, deny]
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-nextest@0.9.88
-    - uses: Swatinem/rust-cache@v2
-    - run: cargo nextest run --features ${{ env.DEFAULT_FEATURES }}
-    - run: cargo test --features ${{ env.DEFAULT_FEATURES }} --doc
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.88
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo nextest run --features ${{ env.DEFAULT_FEATURES }}
+      - run: cargo test --features ${{ env.DEFAULT_FEATURES }} --doc
 
   python-test:
-    needs: [ typos, toml, fmt, clippy, machete, deny ]
+    needs: [typos, toml, fmt, clippy, machete, deny]
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     name: Python API Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    - uses: Swatinem/rust-cache@v2
-    - name: Debug system information (macOS only)
-      if: matrix.os == 'macos-latest'
-      run: |
-        echo "Runner Architecture:"
-        uname -m
-        echo "System Information:"
-        sw_vers
-        echo "Environment Variables:"
-        env | grep -i python || true
-        env | grep -i rust || true
-    - name: Set up virtual environment and install maturin
-      run: |
-        cd minigu/python
-        python -m venv .venv
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Python executable path:"
-        which python
-        echo "Python version:"
-        python --version
-        python -m pip install --upgrade pip
-        pip install maturin
-    - name: Debug Python and Rust architecture
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Python Architecture:"
-        python -c "import platform; print(platform.machine())"
-        echo "Rust Target:"
-        rustc -vV | grep host || true
-    - name: Build Python extension
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Building Python extension..."
-        maturin develop
-    - name: Run Python tests
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Running Python tests..."
-        python minigu/test_minigu_api.py
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - uses: Swatinem/rust-cache@v2
+      - name: Debug system information (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "Runner Architecture:"
+          uname -m
+          echo "System Information:"
+          sw_vers
+          echo "Environment Variables:"
+          env | grep -i python || true
+          env | grep -i rust || true
+      - name: Set up virtual environment and install maturin
+        run: |
+          cd minigu/python
+          python -m venv .venv
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+          echo "Python executable path:"
+          which python
+          echo "Python version:"
+          python --version
+          python -m pip install --upgrade pip
+          pip install maturin
+      - name: Debug Python and Rust architecture
+        run: |
+          cd minigu/python
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+          echo "Python Architecture:"
+          python -c "import platform; print(platform.machine())"
+          echo "Rust Target:"
+          rustc -vV | grep host || true
+      - name: Build Python extension with verbose output
+        run: |
+          cd minigu/python
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+          echo "Building Python extension..."
+          echo "Setting PYO3_PYTHON environment variable"
+          export PYO3_PYTHON=$(which python)
+          echo "PYO3_PYTHON is set to: $PYO3_PYTHON"
+          echo "Running maturin develop with verbose output"
+          python -m maturin develop --verbose
+      - name: Create minimal test script
+        run: |
+          cd minigu/python
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+          python create_minimal_test.py
+      - name: Run minimal test to check for segfaults
+        run: |
+          cd minigu/python
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+          echo "Running minimal test..."
+          python minimal_test.py
+      - name: Verify minigu module import and basic function (macOS ARM64)
+        run: |
+          # 进入 minigu/python 目录
+          cd minigu/python
+          # 激活 Python 虚拟环境
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+
+          echo "--- Attempting to import 'minigu' module ---"
+          # 使用 Python 解释器直接尝试导入
+          # -c 表示执行后面的字符串作为代码
+          # 如果导入成功，则打印成功信息；否则打印失败信息
+          python -c "import minigu; print('SUCCESS: minigu module imported without immediate crash.')" || \
+            { echo "FAILURE: Could not import 'minigu' module. Check maturin build output for warnings/errors."; exit 1; }
+
+          echo "--- Checking for a simple function (if available) ---"
+          # 如果 minigu 模块中有一个非常简单的函数，比如 `minigu.get_version()` 或 `minigu.add_one(x)`
+          # 尝试调用它。如果没有，可以跳过这部分。
+          # 假设有一个函数叫 `get_version()`，它只返回一个字符串
+          python -c "import minigu; \
+                     try: \
+                         result = minigu.get_version(); \
+                         print(f'SUCCESS: Called minigu.get_version() - Result: {result}'); \
+                     except AttributeError: \
+                         print('WARNING: minigu.get_version() not found or callable.'); \
+                     except Exception as e: \
+                         print(f'FAILURE: Calling simple minigu function crashed: {e}'); \
+                         exit 1" || exit 1
+          
+          echo "--- All basic verifications passed ---"
+      - name: Run Python tests
+        run: |
+          cd minigu/python
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            source .venv/Scripts/activate
+          else
+            source .venv/bin/activate
+          fi
+          echo "Running Python tests..."
+          python minigu/test_minigu_api.py
 
   docs:
     name: Build Docs
-    needs: [ typos, toml, fmt, clippy, machete, deny ]
+    needs: [typos, toml, fmt, clippy, machete, deny]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
