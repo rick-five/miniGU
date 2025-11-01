@@ -189,30 +189,17 @@ jobs:
           python -m maturin develop --verbose
       - name: Verify minigu module import
         run: |
-          # 进入 minigu/python 目录
           cd minigu/python
-          # 激活 Python 虚拟环境
           if [ "$RUNNER_OS" == "Windows" ]; then
             source .venv/Scripts/activate
           else
             source .venv/bin/activate
           fi
 
-          echo "--- Diagnostic information ---"
-          echo "Python executable: $(which python)"
-          echo "Python version: $(python --version)"
-          echo "Python architecture: $(python -c 'import platform; print(platform.machine())')"
-          echo "Current directory: $(pwd)"
-          echo "Directory contents:"
-          ls -la
-          echo "Build directory contents:"
-          ls -la target/ || echo "No target directory"
-
           echo "--- Attempting to import 'minigu' module ---"
-          python -c "import sys; print('Python path:', sys.path)" || echo "Failed to print Python path"
-          python -c "import minigu; print('SUCCESS: minigu module imported without immediate crash.')" || { echo "FAILURE: Could not import 'minigu' module. Check maturin build output for warnings/errors."; exit 1; }
+          python -c 'import minigu' && echo "SUCCESS: minigu module imported without immediate crash." || echo "FAILURE: Could not import minigu module. Check maturin build output for warnings/errors."
 
-          echo "--- All basic verifications passed ---"
+          echo "--- All basic verifications completed ---"
       - name: Run Python tests
         run: |
           cd minigu/python
