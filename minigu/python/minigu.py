@@ -20,9 +20,10 @@ except ImportError:
         import minigu_python
         HAS_RUST_BINDINGS = True
         PyMiniGU = minigu_python.PyMiniGU
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError) as e:
         HAS_RUST_BINDINGS = False
         PyMiniGU = None
+        print(f"Warning: Failed to import Rust extension: {e}")
 
 
 def _sanitize_graph_name(name: str) -> str:
