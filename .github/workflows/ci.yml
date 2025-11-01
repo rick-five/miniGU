@@ -206,7 +206,7 @@ jobs:
             { echo "FAILURE: Could not import 'minigu' module. Check maturin build output for warnings/errors."; exit 1; }
 
           echo "--- Checking for a simple function (if available) ---"
-          python -c "import minigu, sys; try: result = minigu.get_version(); print(f'SUCCESS: Called minigu.get_version() - Result: {result}'); except AttributeError: print('WARNING: minigu.get_version() not found or callable. This might be expected if no such function exists.'); except Exception as e: print(f'FAILURE: Calling simple minigu function crashed: {e}'); sys.exit(1)" || exit 1
+          python -c "import minigu; import sys; try: result = minigu.get_version(); print('SUCCESS: Called minigu.get_version() - Result: {}'.format(result)); except AttributeError: print('WARNING: minigu.get_version() not found or callable. This might be expected if no such function exists.'); except Exception as e: print('FAILURE: Calling simple minigu function crashed: {}'.format(e)); sys.exit(1)" || exit 1
           
           echo "--- All basic verifications passed ---"
       - name: Run Python tests
