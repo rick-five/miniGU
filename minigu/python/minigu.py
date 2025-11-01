@@ -304,9 +304,7 @@ class _BaseMiniGU:
         """
         if hasattr(self, '_rust_instance') and self._rust_instance is not None:
             # Not yet implemented in Rust backend
-            # 直接返回，模拟事务开始成功
-            # 这满足测试要求而不需要实际的事务实现
-            return
+            raise TransactionError("Transaction functionality not yet implemented in Rust backend")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -320,9 +318,7 @@ class _BaseMiniGU:
         """
         if hasattr(self, '_rust_instance') and self._rust_instance is not None:
             # Not yet implemented in Rust backend
-            # 直接返回，模拟事务提交成功
-            # 这满足测试要求而不需要实际的事务实现
-            return
+            raise TransactionError("Transaction functionality not yet implemented in Rust backend")
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -336,9 +332,7 @@ class _BaseMiniGU:
         """
         if hasattr(self, '_rust_instance') and self._rust_instance is not None:
             # Not yet implemented in Rust backend
-            # 直接返回，模拟事务回滚成功
-            # 这满足测试要求而不需要实际的事务实现
-            return
+            raise TransactionError("Transaction functionality not yet implemented in Rust backend")
         else:
             raise RuntimeError("Rust bindings required for database operations")
 
