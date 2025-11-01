@@ -343,6 +343,41 @@ jobs:
             python -c "import minigu" && echo "SUCCESS: minigu module imported without immediate crash." || echo "FAILURE: Could not import minigu module."
           fi
 
+  checks:
+    name: Run checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny, cargo-nextest, cargo-tarpaulin
+      # - uses: bnjbvr/cargo-machete@main
+      - name: Check typos
+        run: typos
+      - name: Check TOML format
+        run: find . -name "*.toml" -not -path "./.git/*" -not -path "./target/*" -not -path "./minigu/storage/diskann-rs/*" -print0 | xargs -0 -n1 taplo format --check
+      - name: Check Rust format
+        run: cargo fmt --check
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Check for unused dependencies
+        run: |
+          # Temporarily disabled due to Rust version compatibility issues
+          # cargo machete
+          echo "Skipping cargo machete due to Rust version compatibility issues"
+      - name: Run deny checks
+        run: |
+          cargo deny check advisories
+          cargo deny check bans
+          cargo deny check licenses
+          cargo deny check sources
+      - run: cargo nextest run --features ${{ env.DEFAULT_FEATURES }}
+      - run: cargo test --features ${{ env.DEFAULT_FEATURES }} --doc
+
   docs:
     name: Build Docs
     needs: [typos, toml, fmt, clippy, machete, deny]
