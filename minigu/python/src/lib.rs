@@ -12,6 +12,13 @@ use minigu::session::Session;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList, PyString};
 
+// Define a simple test function to verify module import on macOS
+#[cfg(target_os = "macos")]
+#[pyfunction]
+fn test_macos_import() -> PyResult<String> {
+    Ok("SUCCESS: macOS import test passed".to_string())
+}
+
 // Define custom exception types
 #[pyfunction]
 fn is_syntax_error(e: &Bound<PyAny>) -> PyResult<bool> {
@@ -92,9 +99,9 @@ impl PyMiniGU {
 
     /// Execute a GQL query
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
-        // Get the session
+        // Get the session with better error handling
         let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized")
+            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Please call init() first.")
         })?;
 
         // Execute the query
@@ -675,5 +682,10 @@ fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_timeout_error, m)?)?;
     m.add_function(wrap_pyfunction!(is_transaction_error, m)?)?;
     m.add_function(wrap_pyfunction!(is_not_implemented_error, m)?)?;
+    
+    // Add macOS-specific test function
+    #[cfg(target_os = "macos")]
+    m.add_function(wrap_pyfunction!(test_macos_import, m)?)?;
+
     Ok(())
 }
