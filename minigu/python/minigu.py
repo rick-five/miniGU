@@ -5,6 +5,7 @@ This module provides Python bindings for the miniGU graph database.
 """
 
 import sys
+import re
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json
@@ -22,6 +23,38 @@ except ImportError:
     except (ImportError, ModuleNotFoundError):
         HAS_RUST_BINDINGS = False
         PyMiniGU = None
+
+
+def _sanitize_graph_name(name: str) -> str:
+    """
+    Sanitize graph name to prevent injection attacks.
+    
+    Args:
+        name: Graph name to sanitize
+        
+    Returns:
+        Sanitized graph name containing only alphanumeric characters and underscores
+    """
+    # Remove any characters that are not alphanumeric or underscore
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', name)
+    return sanitized
+
+
+def _sanitize_file_path(path: str) -> str:
+    """
+    Sanitize file path to prevent injection attacks and directory traversal.
+    
+    Args:
+        path: File path to sanitize
+        
+    Returns:
+        Sanitized file path
+    """
+    # Remove potentially dangerous characters
+    sanitized = path.replace('\'', '').replace('"', '').replace(';', '').replace('\n', '').replace('\r', '')
+    # Prevent directory traversal
+    sanitized = sanitized.replace('..', '')
+    return sanitized
 
 
 def _handle_exception(e: Exception) -> None:
@@ -161,37 +194,6 @@ class _BaseMiniGU:
     
     Contains common functionality shared between synchronous and asynchronous implementations.
     """
-    
-def _sanitize_graph_name(name: str) -> str:
-    """
-    Sanitize graph name to prevent injection attacks.
-    
-    Args:
-        name: Graph name to sanitize
-        
-    Returns:
-        Sanitized graph name containing only alphanumeric characters and underscores
-    """
-    # Remove any characters that are not alphanumeric or underscore
-    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', name)
-    return sanitized
-
-
-def _sanitize_file_path(path: str) -> str:
-    """
-    Sanitize file path to prevent injection attacks and directory traversal.
-    
-    Args:
-        path: File path to sanitize
-        
-    Returns:
-        Sanitized file path
-    """
-    # Remove potentially dangerous characters
-    sanitized = path.replace('\'', '').replace('"', '').replace(';', '').replace('\n', '').replace('\r', '')
-    # Prevent directory traversal
-    sanitized = sanitized.replace('..', '')
-    return sanitized
     
     def __init__(self, db_path: Optional[str] = None, 
                  thread_count: int = 1,
@@ -389,6 +391,7 @@ class MiniGU(_BaseMiniGU):
                  cache_size: int = 1000,
                  enable_logging: bool = False):
         """Initialize MiniGU instance."""
+        # Correctly initialize the parent class
         super().__init__(db_path, thread_count, cache_size, enable_logging)
     
     def __enter__(self):
@@ -533,6 +536,7 @@ class AsyncMiniGU(_BaseMiniGU):
                  cache_size: int = 1000,
                  enable_logging: bool = False):
         """Initialize AsyncMiniGU instance."""
+        # Correctly initialize the parent class
         super().__init__(db_path, thread_count, cache_size, enable_logging)
         self._loop = asyncio.get_event_loop()
     

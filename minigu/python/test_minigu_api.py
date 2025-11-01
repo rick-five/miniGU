@@ -127,8 +127,6 @@ class TestMiniGUAPI(unittest.TestCase):
 class TestAsyncMiniGUAPI(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
         self.db = minigu.AsyncMiniGU()
         self.test_graph_name = "test_graph_for_async_unit_tests"
         # Ensure connection for tests that require it
@@ -137,7 +135,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
 
     def tearDown(self):
         """Tear down test fixtures after each test method."""
-        self.loop.close()
+        pass
 
     def test_async_connect(self):
         """Test connecting to the database asynchronously."""
@@ -145,7 +143,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             self.assertTrue(self.db.is_connected)
             self.assertIsNotNone(self.db._rust_instance)
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_async_create_graph(self):
         """Test creating a graph asynchronously."""
@@ -153,7 +151,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             await self.db.create_graph("test_async_graph")
             # If no exception is raised, the test passes
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_async_create_graph_with_special_chars(self):
         """Test creating a graph with special characters in the name asynchronously."""
@@ -161,7 +159,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             await self.db.create_graph("test_async_graph_with_special_chars_123")
             # If no exception is raised, the test passes
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_async_create_graph_with_injection_attempt(self):
         """Test creating a graph with potential injection attempts asynchronously."""
@@ -169,7 +167,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             await self.db.create_graph("test_async_graph'; DROP TABLE users; --")
             # If no exception is raised, the test passes
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_async_begin_transaction(self):
         """Test beginning a transaction asynchronously."""
@@ -179,7 +177,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             with self.assertRaises(minigu.TransactionError):
                 await self.db.begin_transaction()
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_async_commit_transaction(self):
         """Test committing a transaction asynchronously."""
@@ -189,7 +187,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             with self.assertRaises(minigu.TransactionError):
                 await self.db.commit()
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_async_rollback_transaction(self):
         """Test rolling back a transaction asynchronously."""
@@ -199,7 +197,7 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
             with self.assertRaises(minigu.TransactionError):
                 await self.db.rollback()
         
-        self.loop.run_until_complete(_test())
+        asyncio.run(_test())
 
 
 if __name__ == '__main__':
