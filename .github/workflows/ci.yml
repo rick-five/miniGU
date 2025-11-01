@@ -187,15 +187,6 @@ jobs:
           echo "PYO3_PYTHON is set to: $PYO3_PYTHON"
           echo "Running maturin develop with verbose output"
           python -m maturin develop --verbose
-      - name: Create minimal test script
-        run: |
-          cd minigu/python
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            source .venv/Scripts/activate
-          else
-            source .venv/bin/activate
-          fi
-          python create_minimal_test.py
       - name: Run minimal test to check for segfaults
         run: |
           cd minigu/python
