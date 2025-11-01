@@ -198,12 +198,19 @@ jobs:
             source .venv/bin/activate
           fi
 
+          echo "--- Diagnostic information ---"
+          echo "Python executable: $(which python)"
+          echo "Python version: $(python --version)"
+          echo "Python architecture: $(python -c 'import platform; print(platform.machine())')"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          echo "Build directory contents:"
+          ls -la target/ || echo "No target directory"
+
           echo "--- Attempting to import 'minigu' module ---"
-          # 使用 Python 解释器直接尝试导入
-          # -c 表示执行后面的字符串作为代码
-          # 如果导入成功，则打印成功信息；否则打印失败信息
-          python -c "import minigu; print('SUCCESS: minigu module imported without immediate crash.')" || \
-            { echo "FAILURE: Could not import 'minigu' module. Check maturin build output for warnings/errors."; exit 1; }
+          python -c "import sys; print('Python path:', sys.path)" || echo "Failed to print Python path"
+          python -c "import minigu; print('SUCCESS: minigu module imported without immediate crash.')" || { echo "FAILURE: Could not import 'minigu' module. Check maturin build output for warnings/errors."; exit 1; }
 
           echo "--- All basic verifications passed ---"
       - name: Run Python tests
