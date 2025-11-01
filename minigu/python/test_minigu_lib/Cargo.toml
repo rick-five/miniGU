@@ -1,0 +1,7 @@
+[package]
+name = "test_minigu_lib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+minigu = { path = "../../core", default-features = false, features = ["std"] }
