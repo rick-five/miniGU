@@ -215,10 +215,14 @@ jobs:
             
             echo "Environment variables:"
             env | grep -E "(PY|MACOS|DYLD)" || echo "No PY*/MACOS*/DYLD* variables"
+            
+            # Try different maturin options for macOS
+            echo "Running maturin develop with --features pyo3/extension-module"
+            python -m maturin develop --features pyo3/extension-module --verbose
+          else
+            echo "Running maturin develop with verbose output"
+            python -m maturin develop --verbose
           fi
-          
-          echo "Running maturin develop with verbose output"
-          python -m maturin develop --verbose
           
           # Post-build diagnostics
           echo "Build completed. Checking for generated files:"
@@ -354,7 +358,7 @@ jobs:
           components: rustfmt, clippy
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-deny, cargo-nextest, cargo-tarpaulin
+          tool: cargo-deny, cargo-nextest, cargo-tarpaulin, typos-cli
       # - uses: bnjbvr/cargo-machete@main
       - name: Check typos
         run: typos
