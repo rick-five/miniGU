@@ -134,15 +134,25 @@ jobs:
       with:
         python-version: '3.10'
     - uses: Swatinem/rust-cache@v2
-    - name: Set up virtual environment and install maturin
+    - name: Set up completely isolated virtual environment
       run: |
         cd minigu/python
+        # Remove any existing virtual environment to ensure complete isolation
+        if [ -d ".venv" ]; then
+          echo "Removing existing virtual environment for complete isolation..."
+          rm -rf .venv || true
+        fi
+        # Create fresh virtual environment
+        echo "Setting up completely isolated virtual environment..."
         python -m venv .venv
         if [ "$RUNNER_OS" == "Windows" ]; then
           source .venv/Scripts/activate
         else
           source .venv/bin/activate
         fi
+        # Verify we're using the venv Python
+        echo "Virtual environment Python path:"
+        which python
         python -m pip install --upgrade pip
         pip install maturin pytest
     - name: Check architecture consistency
@@ -161,7 +171,7 @@ jobs:
         which python 2>/dev/null || where python
         echo "Python version:"
         python --version
-    - name: Build Python extension
+    - name: Build Python extension in isolated environment
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -169,9 +179,9 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Building Python extension with maturin..."
+        echo "Building Python extension with maturin in isolated environment..."
         python -m maturin develop --release
-    - name: Run minimal import test
+    - name: Run minimal import test in isolated environment
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -179,10 +189,13 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Running minimal import and instantiation test..."
+        echo "Running minimal import and instantiation test in isolated environment..."
         
-        # 创建最小化 Python 脚本
+        # Create minimal Python script using echo to avoid YAML parsing issues
         echo 'import sys' > minimal_test.py
+        echo 'print("Python executable:", sys.executable)' >> minimal_test.py
+        echo 'print("Python path:", sys.path)' >> minimal_test.py
+        echo '' >> minimal_test.py
         echo 'try:' >> minimal_test.py
         echo '    import minigu_python' >> minimal_test.py
         echo '    print("SUCCESS: minigu_python imported successfully.")' >> minimal_test.py
@@ -190,12 +203,14 @@ jobs:
         echo '    print("SUCCESS: PyMiniGU instantiated.")' >> minimal_test.py
         echo 'except Exception as e:' >> minimal_test.py
         echo '    print("FAILURE: Import or Instantiation failed with error: {e}".format(e=e))' >> minimal_test.py
+        echo '    sys.exit(1)' >> minimal_test.py
         echo 'except ImportError as e:' >> minimal_test.py
         echo '    print("FAILURE: ImportError: {e}".format(e=e))' >> minimal_test.py
+        echo '    sys.exit(1)' >> minimal_test.py
         
-        # 使用 VENV 中的 Python 运行脚本，确保在当前目录 (minigu/python)
+        # Run with VENV Python to ensure complete isolation
         python minimal_test.py
-    - name: Run Python tests
+    - name: Run Python tests in isolated environment
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -203,7 +218,7 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Running Python API tests..."
+        echo "Running Python API tests in isolated environment..."
         python -m pytest test_minigu_api.py -v
 
   docs:
