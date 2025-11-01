@@ -206,16 +206,7 @@ jobs:
             { echo "FAILURE: Could not import 'minigu' module. Check maturin build output for warnings/errors."; exit 1; }
 
           echo "--- Checking for a simple function (if available) ---"
-          python -c "import minigu, sys; \
-                     try: \
-                         # 请根据您的实际模块调整这里的函数名 'get_version()'
-                         result = minigu.get_version(); \
-                         print(f'SUCCESS: Called minigu.get_version() - Result: {result}'); \
-                     except AttributeError: \
-                         print('WARNING: minigu.get_version() not found or callable. This might be expected if no such function exists.'); \
-                     except Exception as e: \
-                         print(f'FAILURE: Calling simple minigu function crashed: {e}'); \
-                         sys.exit(1)" || exit 1 # 这里的 '|| exit 1' 用于捕获 Python 解释器本身的非零退出码
+          python -c "import minigu, sys; try: result = minigu.get_version(); print(f'SUCCESS: Called minigu.get_version() - Result: {result}'); except AttributeError: print('WARNING: minigu.get_version() not found or callable. This might be expected if no such function exists.'); except Exception as e: print(f'FAILURE: Calling simple minigu function crashed: {e}'); sys.exit(1)" || exit 1
           
           echo "--- All basic verifications passed ---"
       - name: Run Python tests
