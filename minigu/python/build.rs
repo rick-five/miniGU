@@ -10,8 +10,7 @@ fn main() {
         // Check if we're cross-compiling to macOS ARM64
         let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
         let host_arch = env::var("HOST").unwrap_or_default();
-        let is_cross_compiling = target_arch == "aarch64" && !host_arch.contains("aarch64");
-        
+        let _is_cross_compiling = target_arch == "aarch64" && !host_arch.contains("aarch64");
         // Try to find Python framework
         if let Ok(python_lib) = env::var("PYTHON_LIB") {
             // Use the provided library flags
@@ -29,7 +28,6 @@ fn main() {
             // Do not manually link to Python framework as it may cause conflicts
             // The pyo3/extension-module feature handles this properly
         }
-        
         // Additional macOS-specific linker arguments to avoid issues
         println!("cargo:rustc-link-arg=-undefined");
         println!("cargo:rustc-link-arg=dynamic_lookup");
