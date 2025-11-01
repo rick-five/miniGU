@@ -101,7 +101,9 @@ impl PyMiniGU {
     fn execute(&mut self, query_str: &str, py: Python) -> PyResult<PyObject> {
         // Get the session with better error handling
         let session = self.session.as_mut().ok_or_else(|| {
-            PyErr::new::<pyo3::exceptions::PyException, _>("Session not initialized. Please call init() first.")
+            PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Session not initialized. Please call init() first.",
+            )
         })?;
 
         // Execute the query
@@ -682,7 +684,7 @@ fn minigu_python(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(is_timeout_error, m)?)?;
     m.add_function(wrap_pyfunction!(is_transaction_error, m)?)?;
     m.add_function(wrap_pyfunction!(is_not_implemented_error, m)?)?;
-    
+
     // Add macOS-specific test function
     #[cfg(target_os = "macos")]
     m.add_function(wrap_pyfunction!(test_macos_import, m)?)?;
