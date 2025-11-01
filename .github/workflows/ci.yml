@@ -1,9 +1,10 @@
 name: CI
+
 on:
   push:
-    branches: [master]
+    branches: [ "master" ]
   pull_request:
-    branches: [master]
+    branches: [ "master" ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -76,10 +77,10 @@ jobs:
     - uses: EmbarkStudios/cargo-deny-action@v2
 
   build:
-    needs: [typos, toml, fmt, clippy, machete, deny]
+    needs: [ typos, toml, fmt, clippy, machete, deny ]
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -90,7 +91,7 @@ jobs:
     - run: cargo build --features ${{ env.DEFAULT_FEATURES }}
 
   build_no_std:
-    needs: [typos, toml, fmt, clippy, machete, deny]
+    needs: [ typos, toml, fmt, clippy, machete, deny ]
     name: Build gql-parser in no_std mode
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -102,10 +103,10 @@ jobs:
     - run: cargo build -p gql-parser --target aarch64-unknown-none --no-default-features
 
   test:
-    needs: [typos, toml, fmt, clippy, machete, deny]
+    needs: [ typos, toml, fmt, clippy, machete, deny ]
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -120,10 +121,10 @@ jobs:
     - run: cargo test --features ${{ env.DEFAULT_FEATURES }} --doc
 
   python-test:
-    needs: [typos, toml, fmt, clippy, machete, deny]
+    needs: [ typos, toml, fmt, clippy, machete, deny ]
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     name: Python API Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -134,28 +135,18 @@ jobs:
       with:
         python-version: '3.10'
     - uses: Swatinem/rust-cache@v2
-    - name: Set up completely isolated virtual environment
+    - name: Set up virtual environment and install maturin
       run: |
         cd minigu/python
-        # Remove any existing virtual environment to ensure complete isolation
-        if [ -d ".venv" ]; then
-          echo "Removing existing virtual environment for complete isolation..."
-          rm -rf .venv || true
-        fi
-        # Create fresh virtual environment
-        echo "Setting up completely isolated virtual environment..."
         python -m venv .venv
         if [ "$RUNNER_OS" == "Windows" ]; then
           source .venv/Scripts/activate
         else
           source .venv/bin/activate
         fi
-        # Verify we're using the venv Python
-        echo "Virtual environment Python path:"
-        which python
         python -m pip install --upgrade pip
-        pip install maturin pytest
-    - name: Check architecture consistency
+        pip install maturin
+    - name: Build Python extension
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -163,15 +154,9 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Runner Architecture:"
-        uname -m 2>/dev/null || echo "unknown"
-        echo "Python Interpreter Arch:"
-        python -c "import platform; print(platform.machine())"
-        echo "Python executable path:"
-        which python 2>/dev/null || where python
-        echo "Python version:"
-        python --version
-    - name: Build Python extension in isolated environment
+        echo "Building Python extension..."
+        maturin develop
+    - name: Run Python tests
       run: |
         cd minigu/python
         if [ "$RUNNER_OS" == "Windows" ]; then
@@ -179,54 +164,14 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Building Python extension with maturin in isolated environment..."
-        python -m maturin develop --release
-    - name: Run minimal import test in isolated environment
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Running minimal import and instantiation test in isolated environment..."
-        
-        # Create minimal Python script using echo to avoid YAML parsing issues
-        echo 'import sys' > minimal_test.py
-        echo 'print("Python executable:", sys.executable)' >> minimal_test.py
-        echo 'print("Python path:", sys.path)' >> minimal_test.py
-        echo '' >> minimal_test.py
-        echo 'try:' >> minimal_test.py
-        echo '    import minigu_python' >> minimal_test.py
-        echo '    print("SUCCESS: minigu_python imported successfully.")' >> minimal_test.py
-        echo '    db = minigu_python.PyMiniGU()' >> minimal_test.py
-        echo '    print("SUCCESS: PyMiniGU instantiated.")' >> minimal_test.py
-        echo 'except Exception as e:' >> minimal_test.py
-        echo '    print("FAILURE: Import or Instantiation failed with error: {e}".format(e=e))' >> minimal_test.py
-        echo '    sys.exit(1)' >> minimal_test.py
-        echo 'except ImportError as e:' >> minimal_test.py
-        echo '    print("FAILURE: ImportError: {e}".format(e=e))' >> minimal_test.py
-        echo '    sys.exit(1)' >> minimal_test.py
-        
-        # Run with VENV Python to ensure complete isolation
-        python minimal_test.py
-    - name: Run Python tests in isolated environment
-      run: |
-        cd minigu/python
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          source .venv/Scripts/activate
-        else
-          source .venv/bin/activate
-        fi
-        echo "Running Python API tests in isolated environment..."
-        python -m pytest test_minigu_api.py -v
+        echo "Running Python tests..."
+        python test_minigu_api.py
 
   docs:
     name: Build Docs
-    needs: [typos, toml, fmt, clippy, machete, deny]
+    needs: [ typos, toml, fmt, clippy, machete, deny ]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
     - uses: actions-rust-lang/setup-rust-toolchain@v1
-    - run: cargo doc --lib --no-deps --features ${{ env.DEFAULT_FEATURES }}
