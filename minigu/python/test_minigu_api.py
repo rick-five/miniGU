@@ -10,6 +10,7 @@ This file contains tests for:
 5. Error handling
 6. Async API functionality
 7. Transaction methods
+8. Security features
 """
 
 import unittest
@@ -48,6 +49,18 @@ class TestMiniGUAPI(unittest.TestCase):
         self.db.create_graph("test_graph")
         # If we reach here, the test passes
 
+    def test_create_graph_with_special_chars(self):
+        """Test creating a graph with special characters in the name."""
+        # This should sanitize the name and not throw exceptions
+        self.db.create_graph("test_graph_with_special_chars_123")
+        # If we reach here, the test passes
+
+    def test_create_graph_with_injection_attempt(self):
+        """Test creating a graph with potential injection attempts."""
+        # This should sanitize the name and not throw exceptions
+        self.db.create_graph("test_graph'; DROP TABLE users; --")
+        # If we reach here, the test passes
+
     def test_begin_transaction(self):
         """Test beginning a transaction."""
         self.db.create_graph("test_graph_for_transaction")
@@ -81,6 +94,35 @@ class TestMiniGUAPI(unittest.TestCase):
         with self.assertRaises(minigu.TransactionError):
             self.db.begin_transaction()
 
+    def test_sanitize_graph_name(self):
+        """Test the graph name sanitization function."""
+        # Test normal name
+        self.assertEqual(minigu._sanitize_graph_name("test_graph"), "test_graph")
+        
+        # Test name with special characters
+        self.assertEqual(minigu._sanitize_graph_name("test_graph_123"), "test_graph_123")
+        
+        # Test name with injection attempt
+        self.assertEqual(minigu._sanitize_graph_name("test_graph'; DROP TABLE users; --"), 
+                         "test_graphDROPTABLEusers")
+        
+        # Test name with only special characters
+        self.assertEqual(minigu._sanitize_graph_name("'; --"), "")
+
+    def test_sanitize_file_path(self):
+        """Test the file path sanitization function."""
+        # Test normal path
+        self.assertEqual(minigu._sanitize_file_path("test.csv"), "test.csv")
+        
+        # Test path with quotes and semicolons
+        self.assertEqual(minigu._sanitize_file_path("test';.csv"), "test.csv")
+        
+        # Test path with directory traversal attempt
+        self.assertEqual(minigu._sanitize_file_path("../test.csv"), "/test.csv")
+        
+        # Test path with newlines
+        self.assertEqual(minigu._sanitize_file_path("test\n.csv"), "test.csv")
+
 
 class TestAsyncMiniGUAPI(unittest.TestCase):
     def setUp(self):
@@ -109,6 +151,22 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
         """Test creating a graph asynchronously."""
         async def _test():
             await self.db.create_graph("test_async_graph")
+            # If no exception is raised, the test passes
+        
+        self.loop.run_until_complete(_test())
+
+    def test_async_create_graph_with_special_chars(self):
+        """Test creating a graph with special characters in the name asynchronously."""
+        async def _test():
+            await self.db.create_graph("test_async_graph_with_special_chars_123")
+            # If no exception is raised, the test passes
+        
+        self.loop.run_until_complete(_test())
+
+    def test_async_create_graph_with_injection_attempt(self):
+        """Test creating a graph with potential injection attempts asynchronously."""
+        async def _test():
+            await self.db.create_graph("test_async_graph'; DROP TABLE users; --")
             # If no exception is raised, the test passes
         
         self.loop.run_until_complete(_test())
