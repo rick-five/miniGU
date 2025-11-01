@@ -15,9 +15,9 @@ name = "minigu_python"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.24.2", features = ["extension-module", "abi3-py37"] }
-minigu = { path = "../core", default-features = false }
-arrow = { version = "55.2.0", default-features = false, features = ["ffi"] }
+pyo3 = { workspace = true, features = ["extension-module", "abi3-py37"] }
+minigu = { workspace = true }
+arrow = { workspace = true, features = ["ffi"] }
 
 [features]
 default = []
