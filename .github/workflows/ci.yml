@@ -135,6 +135,16 @@ jobs:
       with:
         python-version: '3.10'
     - uses: Swatinem/rust-cache@v2
+    - name: Debug system information (macOS only)
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "Runner Architecture:"
+        uname -m
+        echo "System Information:"
+        sw_vers
+        echo "Environment Variables:"
+        env | grep -i python || true
+        env | grep -i rust || true
     - name: Set up virtual environment and install maturin
       run: |
         cd minigu/python
@@ -144,8 +154,24 @@ jobs:
         else
           source .venv/bin/activate
         fi
+        echo "Python executable path:"
+        which python
+        echo "Python version:"
+        python --version
         python -m pip install --upgrade pip
         pip install maturin
+    - name: Debug Python and Rust architecture
+      run: |
+        cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        echo "Python Architecture:"
+        python -c "import platform; print(platform.machine())"
+        echo "Rust Target:"
+        rustc -vV | grep host || true
     - name: Build Python extension
       run: |
         cd minigu/python
