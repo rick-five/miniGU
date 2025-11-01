@@ -165,7 +165,7 @@ jobs:
           source .venv/bin/activate
         fi
         echo "Running Python tests..."
-        python test_minigu_api.py
+        python minigu/test_minigu_api.py
 
   docs:
     name: Build Docs
