@@ -11,7 +11,7 @@ fn main() {
         let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
         let host_arch = env::var("HOST").unwrap_or_default();
         let is_cross_compiling = target_arch == "aarch64" && !host_arch.contains("aarch64");
-        
+
         // Try to find Python framework
         if let Ok(python_lib) = env::var("PYTHON_LIB") {
             // Use the provided library flags
@@ -54,7 +54,7 @@ fn main() {
 
     // Enable PyO3 auto-initialize feature
     println!("cargo:rustc-cfg=pyo3_auto_initialize");
-    
+
     // Add additional configuration to prevent segfaults on macOS
     if env::var("CARGO_CFG_TARGET_OS").is_ok_and(|os| os == "macos") {
         println!("cargo:rustc-env=PYO3_PRINT_CONFIG=1");
