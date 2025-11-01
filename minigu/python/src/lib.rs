@@ -41,6 +41,22 @@ fn is_not_implemented_error(e: &Bound<PyAny>) -> PyResult<bool> {
         || error_str.to_lowercase().contains("not yet implemented"))
 }
 
+// Helper function to sanitize file paths
+fn sanitize_file_path(path: &str) -> String {
+    // Remove potentially dangerous characters
+    path.replace(['\'', '"', ';', '\n', '\r'], "")
+        // Prevent directory traversal
+        .replace("..", "")
+}
+
+// Helper function to sanitize graph names
+fn sanitize_graph_name(name: &str) -> String {
+    // Allow alphanumeric characters and underscores only
+    name.chars()
+        .filter(|c| c.is_alphanumeric() || *c == '_')
+        .collect()
+}
+
 /// PyMiniGU class that wraps the Rust Database
 #[pyclass]
 #[allow(clippy::upper_case_acronyms)]
@@ -170,7 +186,7 @@ impl PyMiniGU {
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
         // Sanitize the path to prevent injection attacks
-        let sanitized_path = file_path.replace(['\'', '"', ';', '\n', '\r'], "");
+        let sanitized_path = sanitize_file_path(file_path);
 
         // Execute the import procedure with correct syntax (no semicolon)
         let query = format!(
@@ -369,14 +385,16 @@ impl PyMiniGU {
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
         // Sanitize the path to prevent injection attacks
-        let sanitized_path = file_path.replace(['\'', '"', ';', '\n', '\r'], "");
+        let sanitized_path = sanitize_file_path(file_path);
 
         // Execute export procedure with correct syntax (no semicolon)
         let query = format!(
             "CALL export('{}', '{}', 'manifest.json')",
             graph_name, sanitized_path
         );
-        session.query(&query).expect("Export failed");
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Export failed: {}", e))
+        })?;
 
         println!("Database saved successfully to: {}", file_path);
         Ok(())
@@ -395,7 +413,14 @@ impl PyMiniGU {
         }
 
         // Sanitize the graph name to prevent injection
-        let sanitized_name = graph_name.replace("'", "''");
+        let sanitized_name = sanitize_graph_name(graph_name);
+
+        // Validate graph name after sanitization
+        if sanitized_name.is_empty() {
+            return Err(PyErr::new::<pyo3::exceptions::PyException, _>(
+                "Graph name contains only invalid characters",
+            ));
+        }
 
         // Create the graph using the create_test_graph procedure
         let query = format!("CALL create_test_graph('{}')", sanitized_name);
@@ -444,7 +469,7 @@ impl PyMiniGU {
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
         // Sanitize the path to prevent injection attacks
-        let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
+        let sanitized_path = sanitize_file_path(path);
 
         let query = format!("LOAD CSV FROM \"{}\" INTO {}", sanitized_path, graph_name);
         match session.query(&query) {
@@ -478,7 +503,7 @@ impl PyMiniGU {
         let graph_name = self.current_graph.as_deref().unwrap_or("default_graph");
 
         // Sanitize the path to prevent injection attacks
-        let sanitized_path = path.replace(['\'', '"', ';', '\n', '\r'], "");
+        let sanitized_path = sanitize_file_path(path);
 
         let query = format!("LOAD JSON FROM \"{}\" INTO {}", sanitized_path, graph_name);
         match session.query(&query) {
@@ -505,7 +530,7 @@ impl PyMiniGU {
         }
 
         // Sanitize graph name
-        let sanitized_name = graph_name.replace(|c: char| !c.is_alphanumeric() && c != '_', "");
+        let sanitized_name = sanitize_graph_name(graph_name);
 
         // Validate graph name after sanitization
         if sanitized_name.is_empty() {
@@ -543,7 +568,7 @@ impl PyMiniGU {
         }
 
         // Sanitize graph name
-        let sanitized_name = graph_name.replace(['\'', '"', ';', '\n', '\r'], "");
+        let sanitized_name = sanitize_graph_name(graph_name);
 
         // Validate graph name after sanitization
         if sanitized_name.is_empty() {
@@ -553,7 +578,9 @@ impl PyMiniGU {
         }
 
         let query = format!("USE GRAPH {}", sanitized_name);
-        session.query(&query).expect("Failed to use graph");
+        session.query(&query).map_err(|e| {
+            PyErr::new::<pyo3::exceptions::PyException, _>(format!("Failed to use graph: {}", e))
+        })?;
         self.current_graph = Some(sanitized_name);
         Ok(())
     }

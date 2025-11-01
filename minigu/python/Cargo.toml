@@ -18,6 +18,7 @@ pyo3 = { workspace = true, features = ["extension-module", "abi3-py37"] }
 pyo3-build-config = "0.24.2"
 
 [features]
+default = ["pyo3/extension-module"]
 extension-module = ["pyo3/extension-module"]
 
 [lints]
