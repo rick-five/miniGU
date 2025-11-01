@@ -11,7 +11,6 @@ fn main() {
         let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
         let host_arch = env::var("HOST").unwrap_or_default();
         let is_cross_compiling = target_arch == "aarch64" && !host_arch.contains("aarch64");
-        
         // Try to find Python framework
         if let Ok(python_lib) = env::var("PYTHON_LIB") {
             // Use the provided library flags
@@ -44,7 +43,6 @@ fn main() {
             println!("cargo:rustc-link-search=framework=/Library/Frameworks");
             println!("cargo:rustc-link-search=framework=/System/Library/Frameworks");
         }
-        
         // Additional macOS-specific linker arguments to avoid issues
         println!("cargo:rustc-link-arg=-undefined");
         println!("cargo:rustc-link-arg=dynamic_lookup");
