@@ -320,22 +320,24 @@ jobs:
             echo "Virtual environment: $VIRTUAL_ENV"
             echo "Directory contents:"
             ls -la
-            echo "Target directory:"
-            ls -la target || echo "No target directory"
+            echo ".venv directory structure:"
+            find .venv -name "*minigu*" -type f | head -10
             
-            # Check for minigu library specifically
-            echo "Checking for minigu library:"
-            find . -name "*minigu*" -type f | head -10
-            if [ -f "target/debug/libminigu_python.dylib" ]; then
+            # Check the minigu library file in detail
+            echo "Checking minigu library file:"
+            if [ -f ".venv/lib/python3.10/site-packages/minigu_python/minigu_python.abi3.so" ]; then
               echo "minigu library found, checking details:"
-              file target/debug/libminigu_python.dylib
-              otool -L target/debug/libminigu_python.dylib
+              file .venv/lib/python3.10/site-packages/minigu_python/minigu_python.abi3.so
+              otool -L .venv/lib/python3.10/site-packages/minigu_python/minigu_python.abi3.so || echo "otool failed"
             else
-              echo "minigu library not found in expected location"
+              echo "minigu library not found"
             fi
             
-            echo "Attempting to import minigu module with basic test..."
-            python -c "import sys; print('Python executable:', sys.executable); print('Python path:', sys.path); import minigu; print('SUCCESS: minigu module imported on macOS')" 2>&1 || echo "FAILURE: Could not import minigu module on macOS"
+            # Try to get more information about the segfault
+            echo "Trying to import with more diagnostics..."
+            export DYLD_PRINT_LIBRARIES=1
+            export DYLD_PRINT_APIS=1
+            python -c "import sys; print('Python executable:', sys.executable); print('Python path:', sys.path); import minigu; print('SUCCESS: minigu module imported on macOS')" 2>&1 | tail -50 || echo "FAILURE: Could not import minigu module on macOS"
           else
             # For other platforms, just try to import
             python -c "import minigu" && echo "SUCCESS: minigu module imported without immediate crash." || echo "FAILURE: Could not import minigu module."
