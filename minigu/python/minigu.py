@@ -538,7 +538,7 @@ class AsyncMiniGU(_BaseMiniGU):
         """Initialize AsyncMiniGU instance."""
         # Correctly initialize the parent class
         super().__init__(db_path, thread_count, cache_size, enable_logging)
-        self._loop = asyncio.get_event_loop()
+        # Do not initialize the loop here - it will be created when needed
     
     async def __aenter__(self):
         """Async context manager entry."""

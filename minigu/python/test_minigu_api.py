@@ -124,7 +124,7 @@ class TestMiniGUAPI(unittest.TestCase):
         self.assertEqual(minigu._sanitize_file_path("test\n.csv"), "test.csv")
 
 
-class TestAsyncMiniGUAPI(unittest.TestCase):
+class TestAsyncMiniGUAPI(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         """Set up test fixtures before each test method."""
         self.db = minigu.AsyncMiniGU()
@@ -137,67 +137,46 @@ class TestAsyncMiniGUAPI(unittest.TestCase):
         """Tear down test fixtures after each test method."""
         pass
 
-    def test_async_connect(self):
+    async def test_async_connect(self):
         """Test connecting to the database asynchronously."""
-        async def _test():
-            self.assertTrue(self.db.is_connected)
-            self.assertIsNotNone(self.db._rust_instance)
-        
-        asyncio.run(_test())
+        self.assertTrue(self.db.is_connected)
+        self.assertIsNotNone(self.db._rust_instance)
 
-    def test_async_create_graph(self):
+    async def test_async_create_graph(self):
         """Test creating a graph asynchronously."""
-        async def _test():
-            await self.db.create_graph("test_async_graph")
-            # If no exception is raised, the test passes
-        
-        asyncio.run(_test())
+        await self.db.create_graph("test_async_graph")
+        # If no exception is raised, the test passes
 
-    def test_async_create_graph_with_special_chars(self):
+    async def test_async_create_graph_with_special_chars(self):
         """Test creating a graph with special characters in the name asynchronously."""
-        async def _test():
-            await self.db.create_graph("test_async_graph_with_special_chars_123")
-            # If no exception is raised, the test passes
-        
-        asyncio.run(_test())
+        await self.db.create_graph("test_async_graph_with_special_chars_123")
+        # If no exception is raised, the test passes
 
-    def test_async_create_graph_with_injection_attempt(self):
+    async def test_async_create_graph_with_injection_attempt(self):
         """Test creating a graph with potential injection attempts asynchronously."""
-        async def _test():
-            await self.db.create_graph("test_async_graph'; DROP TABLE users; --")
-            # If no exception is raised, the test passes
-        
-        asyncio.run(_test())
+        await self.db.create_graph("test_async_graph'; DROP TABLE users; --")
+        # If no exception is raised, the test passes
 
-    def test_async_begin_transaction(self):
+    async def test_async_begin_transaction(self):
         """Test beginning a transaction asynchronously."""
-        async def _test():
-            await self.db.create_graph("test_async_transaction_graph")
-            # This should raise TransactionError as the feature is not yet implemented
-            with self.assertRaises(minigu.TransactionError):
-                await self.db.begin_transaction()
-        
-        asyncio.run(_test())
+        await self.db.create_graph("test_async_transaction_graph")
+        # This should raise TransactionError as the feature is not yet implemented
+        with self.assertRaises(minigu.TransactionError):
+            await self.db.begin_transaction()
 
-    def test_async_commit_transaction(self):
+    async def test_async_commit_transaction(self):
         """Test committing a transaction asynchronously."""
-        async def _test():
-            await self.db.create_graph("test_async_commit_graph")
-            # This should raise TransactionError as the feature is not yet implemented
-            with self.assertRaises(minigu.TransactionError):
-                await self.db.commit()
-        
-        asyncio.run(_test())
+        await self.db.create_graph("test_async_commit_graph")
+        # This should raise TransactionError as the feature is not yet implemented
+        with self.assertRaises(minigu.TransactionError):
+            await self.db.commit()
 
-    def test_async_rollback_transaction(self):
+    async def test_async_rollback_transaction(self):
         """Test rolling back a transaction asynchronously."""
-        async def _test():
-            await self.db.create_graph("test_async_rollback_graph")
-            # This should raise TransactionError as the feature is not yet implemented
-            with self.assertRaises(minigu.TransactionError):
-                await self.db.rollback()
-        
-        asyncio.run(_test())
+        await self.db.create_graph("test_async_rollback_graph")
+        # This should raise TransactionError as the feature is not yet implemented
+        with self.assertRaises(minigu.TransactionError):
+            await self.db.rollback()
 
 
 if __name__ == '__main__':
