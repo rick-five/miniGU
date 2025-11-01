@@ -16,10 +16,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.24.2", features = ["extension-module", "abi3-py37"] }
-minigu = { path = "../", default-features = false, features = ["std"] }
+minigu = { path = "../core", default-features = false }
 arrow = { version = "55.2.0", default-features = false, features = ["ffi"] }
 
 [features]
-default = ["std"]
-std = ["minigu/std"]
+default = []
 extension-module = ["pyo3/extension-module"]
