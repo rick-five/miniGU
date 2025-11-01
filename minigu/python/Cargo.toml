@@ -1,24 +1,25 @@
 [package]
-edition.workspace = true
-license.workspace = true
 name = "minigu-python"
-repository.workspace = true
-version.workspace = true
+version = "0.1.0"
+edition = "2024"
+authors = ["TuGraph Open Source Team"]
+description = "Python bindings for miniGU graph database"
+readme = "README.md"
+repository = "https://github.com/TuGraph-family/miniGU"
+license = "Apache-2.0"
+keywords = ["graph", "database", "gql", "python"]
+categories = ["database"]
 
 [lib]
-crate-type = ["cdylib"]
 name = "minigu_python"
+crate-type = ["cdylib"]
 
 [dependencies]
-arrow = { workspace = true }
-minigu = { workspace = true }
-pyo3 = { workspace = true, features = ["extension-module", "abi3-py37"] }
-
-[build-dependencies]
-pyo3-build-config = "0.24.2"
+pyo3 = { version = "0.24.2", features = ["extension-module", "abi3-py37"] }
+minigu = { path = "../", default-features = false, features = ["std"] }
+arrow = { version = "55.2.0", default-features = false, features = ["ffi"] }
 
 [features]
+default = ["std"]
+std = ["minigu/std"]
 extension-module = ["pyo3/extension-module"]
-
-[lints]
-workspace = true
