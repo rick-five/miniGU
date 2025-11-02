@@ -154,7 +154,6 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Building Python extension..."
         maturin develop
     - name: Run Python tests
       run: |
@@ -164,7 +163,6 @@ jobs:
         else
           source .venv/bin/activate
         fi
-        echo "Running Python tests..."
         python test_minigu_api.py
 
   docs:
