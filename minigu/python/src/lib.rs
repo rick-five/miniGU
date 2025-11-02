@@ -33,10 +33,10 @@ fn is_timeout_error(e: &Bound<PyAny>) -> PyResult<bool> {
 fn is_transaction_error(e: &Bound<PyAny>) -> PyResult<bool> {
     let error_str: String = e.str()?.extract()?;
     let error_lower = error_str.to_lowercase();
-    Ok(error_lower.contains("transaction") || 
-       error_lower.contains("txn") || 
-       error_lower.contains("commit") || 
-       error_lower.contains("rollback"))
+    Ok(error_lower.contains("transaction")
+        || error_lower.contains("txn")
+        || error_lower.contains("commit")
+        || error_lower.contains("rollback"))
 }
 
 /// Check if an exception indicates a feature is not implemented
@@ -44,8 +44,7 @@ fn is_transaction_error(e: &Bound<PyAny>) -> PyResult<bool> {
 fn is_not_implemented_error(e: &Bound<PyAny>) -> PyResult<bool> {
     let error_str: String = e.str()?.extract()?;
     let error_lower = error_str.to_lowercase();
-    Ok(error_lower.contains("not implemented") || 
-       error_lower.contains("not yet implemented"))
+    Ok(error_lower.contains("not implemented") || error_lower.contains("not yet implemented"))
 }
 
 // Helper function to sanitize file paths
