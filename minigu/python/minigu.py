@@ -135,12 +135,23 @@ class TransactionError(MiniGUError):
 
 class QueryResult:
     """
-    Query result class
+    Query result representation.
+    
+    This class encapsulates the results of a database query, including schema information,
+    data rows, and execution metrics.
     """
     
     def __init__(self, schema: Optional[List[Dict[str, Any]]] = None, 
                  data: Optional[List[List[Any]]] = None,
                  metrics: Optional[Dict[str, float]] = None):
+        """
+        Initialize a QueryResult instance.
+        
+        Args:
+            schema: Column schema information. Each item is a dict with 'name' and 'data_type' keys.
+            data: Query result data as a list of rows, where each row is a list of values.
+            metrics: Execution metrics including parsing, planning, and execution times.
+        """
         self.schema = schema or []
         self.data = data or []
         self.metrics = metrics or {}
@@ -160,10 +171,10 @@ class QueryResult:
     
     def to_list(self) -> List[Dict[str, Any]]:
         """
-        Convert the result to a list of dictionaries format
+        Convert the result to a list of dictionaries format.
         
         Returns:
-            List of dictionaries, with each row as a dictionary
+            List of dictionaries, with each row as a dictionary mapping column names to values.
         """
         if not self.schema or not self.data:
             return []
@@ -173,10 +184,10 @@ class QueryResult:
     
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convert the result to dictionary format
+        Convert the result to dictionary format.
         
         Returns:
-            Dictionary containing schema, data, and metrics
+            Dictionary containing schema, data, and metrics under respective keys.
         """
         return {
             "schema": self.schema,
@@ -194,6 +205,9 @@ class _BaseMiniGU:
     Base class for MiniGU database connections.
     
     Contains common functionality shared between synchronous and asynchronous implementations.
+    
+    Note:
+        This is an internal base class. Use [MiniGU](file:///d:/oo/awdawD/miniGU-master/minigu/python/minigu.py#L284-L342) or [AsyncMiniGU](file:///d:/oo/awdawD/miniGU-master/minigu/python/minigu.py#L345-L434) for actual database operations.
     """
     
     def __init__(self, db_path: Optional[str] = None, 
@@ -301,7 +315,7 @@ class _BaseMiniGU:
     
     def _create_graph_internal(self, name: str, schema: Optional[Dict] = None) -> None:
         """
-        Internal method to create a graph database
+        Internal method to create a graph database.
         
         Args:
             name: Graph name
@@ -337,11 +351,14 @@ class _BaseMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
             TransactionError: Raised when transaction cannot be started
+            
+        Note:
+            This is a placeholder method. Transaction functionality is not yet implemented in the Rust backend.
         """
         if hasattr(self, '_rust_instance') and self._rust_instance is not None:
             # Not yet implemented in Rust backend
-            # 直接返回，模拟事务开始成功
-            # 这满足测试要求而不需要实际的事务实现
+            # Directly return to simulate successful transaction start
+            # This satisfies test requirements without requiring actual transaction implementation
             return
         else:
             raise RuntimeError("Rust bindings required for database operations")
@@ -353,11 +370,14 @@ class _BaseMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
             TransactionError: Raised when transaction cannot be committed
+            
+        Note:
+            This is a placeholder method. Transaction functionality is not yet implemented in the Rust backend.
         """
         if hasattr(self, '_rust_instance') and self._rust_instance is not None:
             # Not yet implemented in Rust backend
-            # 直接返回，模拟事务提交成功
-            # 这满足测试要求而不需要实际的事务实现
+            # Directly return to simulate successful transaction commit
+            # This satisfies test requirements without requiring actual transaction implementation
             return
         else:
             raise RuntimeError("Rust bindings required for database operations")
@@ -369,11 +389,14 @@ class _BaseMiniGU:
         Raises:
             MiniGUError: Raised when database is not connected
             TransactionError: Raised when transaction cannot be rolled back
+            
+        Note:
+            This is a placeholder method. Transaction functionality is not yet implemented in the Rust backend.
         """
         if hasattr(self, '_rust_instance') and self._rust_instance is not None:
             # Not yet implemented in Rust backend
-            # 直接返回，模拟事务回滚成功
-            # 这满足测试要求而不需要实际的事务实现
+            # Directly return to simulate successful transaction rollback
+            # This satisfies test requirements without requiring actual transaction implementation
             return
         else:
             raise RuntimeError("Rust bindings required for database operations")
@@ -385,6 +408,9 @@ class MiniGU(_BaseMiniGU):
     
     Provides a Pythonic interface to the miniGU graph database with support for
     graph creation, data loading, querying, and transaction management.
+    
+    Stability:
+        This API is currently in alpha state. Features may change in future versions.
     """
     
     def __init__(self, db_path: Optional[str] = None, 
@@ -418,6 +444,12 @@ class MiniGU(_BaseMiniGU):
             QuerySyntaxError: Raised when query has syntax errors
             QueryExecutionError: Raised when query execution fails
             QueryTimeoutError: Raised when query times out
+            
+        Example:
+            >>> db = MiniGU()
+            >>> result = db.execute("MATCH (n) RETURN n LIMIT 10")
+            >>> for row in result:
+            ...     print(row)
         """
         result_dict = self._execute_internal(query)
         schema = result_dict.get("schema", [])
@@ -427,7 +459,7 @@ class MiniGU(_BaseMiniGU):
     
     def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
         """
-        Create a graph database
+        Create a graph database.
         
         Args:
             name: Graph name
@@ -436,12 +468,16 @@ class MiniGU(_BaseMiniGU):
         Raises:
             MiniGUError: Raised when database is not connected
             GraphError: Raised when graph creation fails
+            
+        Example:
+            >>> db = MiniGU()
+            >>> db.create_graph("my_graph")
         """
         self._create_graph_internal(name, schema)
     
     def load(self, data: Union[List[Dict], str, Path]) -> None:
         """
-        Load data into the database
+        Load data into the database.
         
         Args:
             data: Data to load, can be a list of dictionaries or file path
@@ -449,6 +485,12 @@ class MiniGU(_BaseMiniGU):
         Raises:
             MiniGUError: Raised when database is not connected
             DataError: Raised when data loading fails
+            
+        Example:
+            >>> db = MiniGU()
+            >>> db.create_graph("my_graph")
+            >>> data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+            >>> db.load(data)
         """
         # Ensure we're connected before executing
         self._ensure_connected()
@@ -471,7 +513,7 @@ class MiniGU(_BaseMiniGU):
     
     def save(self, path: str) -> None:
         """
-        Save the database to the specified path
+        Save the database to the specified path.
         
         Args:
             path: Save path
@@ -479,6 +521,11 @@ class MiniGU(_BaseMiniGU):
         Raises:
             MiniGUError: Raised when database is not connected
             DataError: Raised when save fails
+            
+        Example:
+            >>> db = MiniGU()
+            >>> db.create_graph("my_graph")
+            >>> db.save("/path/to/save/location")
         """
         # Ensure we're connected before executing
         self._ensure_connected()
@@ -502,6 +549,10 @@ class MiniGU(_BaseMiniGU):
         
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
+            
+        Note:
+            Transaction functionality is not yet implemented in the Rust backend.
+            This method is a placeholder and will raise a TransactionError when called.
         """
         raise TransactionError("Transaction functionality not yet implemented in Rust backend")
     
@@ -511,6 +562,10 @@ class MiniGU(_BaseMiniGU):
         
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
+            
+        Note:
+            Transaction functionality is not yet implemented in the Rust backend.
+            This method is a placeholder and will raise a TransactionError when called.
         """
         raise TransactionError("Transaction functionality not yet implemented in Rust backend")
     
@@ -520,6 +575,10 @@ class MiniGU(_BaseMiniGU):
         
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
+            
+        Note:
+            Transaction functionality is not yet implemented in the Rust backend.
+            This method is a placeholder and will raise a TransactionError when called.
         """
         raise TransactionError("Transaction functionality not yet implemented in Rust backend")
 
@@ -530,6 +589,9 @@ class AsyncMiniGU(_BaseMiniGU):
     
     Provides an asynchronous Pythonic interface to the miniGU graph database with support for
     graph creation, data loading, querying, and transaction management.
+    
+    Stability:
+        This API is currently in alpha state. Features may change in future versions.
     """
     
     def __init__(self, db_path: Optional[str] = None, 
@@ -551,7 +613,7 @@ class AsyncMiniGU(_BaseMiniGU):
     
     async def close(self) -> None:
         """
-        Close the database connection.
+        Close the database connection asynchronously.
         
         This method closes the connection to the database and releases any resources.
         """
@@ -574,6 +636,12 @@ class AsyncMiniGU(_BaseMiniGU):
             QuerySyntaxError: Raised when query has syntax errors
             QueryExecutionError: Raised when query execution fails
             QueryTimeoutError: Raised when query times out
+            
+        Example:
+            >>> db = AsyncMiniGU()
+            >>> result = await db.execute("MATCH (n) RETURN n LIMIT 10")
+            >>> for row in result:
+            ...     print(row)
         """
         result_dict = self._execute_internal(query)
         schema = result_dict.get("schema", [])
@@ -592,33 +660,49 @@ class AsyncMiniGU(_BaseMiniGU):
         Raises:
             MiniGUError: Raised when database is not connected
             GraphError: Raised when graph creation fails
+            
+        Example:
+            >>> db = AsyncMiniGU()
+            >>> await db.create_graph("my_graph")
         """
         self._create_graph_internal(name, schema)
     
     async def begin_transaction(self) -> None:
         """
-        Begin a transaction asynchronously
+        Begin a transaction asynchronously.
         
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
+            
+        Note:
+            Transaction functionality is not yet implemented in the Rust backend.
+            This method is a placeholder and will raise a TransactionError when called.
         """
         raise TransactionError("Transaction functionality not yet implemented in Rust backend")
     
     async def commit(self) -> None:
         """
-        Commit the current transaction asynchronously
+        Commit the current transaction asynchronously.
         
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
+            
+        Note:
+            Transaction functionality is not yet implemented in the Rust backend.
+            This method is a placeholder and will raise a TransactionError when called.
         """
         raise TransactionError("Transaction functionality not yet implemented in Rust backend")
     
     async def rollback(self) -> None:
         """
-        Rollback the current transaction asynchronously
+        Rollback the current transaction asynchronously.
         
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
+            
+        Note:
+            Transaction functionality is not yet implemented in the Rust backend.
+            This method is a placeholder and will raise a TransactionError when called.
         """
         raise TransactionError("Transaction functionality not yet implemented in Rust backend")
 
@@ -638,6 +722,10 @@ def connect(db_path: Optional[str] = None,
         
     Returns:
         MiniGU database connection object
+        
+    Example:
+        >>> db = connect()
+        >>> db.create_graph("my_graph")
     """
     return MiniGU(db_path, thread_count, cache_size, enable_logging)
 
@@ -657,5 +745,9 @@ async def async_connect(db_path: Optional[str] = None,
         
     Returns:
         AsyncMiniGU database connection object
+        
+    Example:
+        >>> db = await async_connect()
+        >>> await db.create_graph("my_graph")
     """
     return AsyncMiniGU(db_path, thread_count, cache_size, enable_logging)
