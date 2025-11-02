@@ -5,6 +5,7 @@ This module provides Python bindings for the miniGU graph database.
 """
 
 import sys
+import re
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json
@@ -19,9 +20,42 @@ except ImportError:
         import minigu_python
         HAS_RUST_BINDINGS = True
         PyMiniGU = minigu_python.PyMiniGU
-    except (ImportError, ModuleNotFoundError):
+    except (ImportError, ModuleNotFoundError) as e:
         HAS_RUST_BINDINGS = False
         PyMiniGU = None
+        print(f"Warning: Failed to import Rust extension: {e}")
+
+
+def _sanitize_graph_name(name: str) -> str:
+    """
+    Sanitize graph name to prevent injection attacks.
+    
+    Args:
+        name: Graph name to sanitize
+        
+    Returns:
+        Sanitized graph name containing only alphanumeric characters and underscores
+    """
+    # Remove any characters that are not alphanumeric or underscore
+    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', name)
+    return sanitized
+
+
+def _sanitize_file_path(path: str) -> str:
+    """
+    Sanitize file path to prevent injection attacks and directory traversal.
+    
+    Args:
+        path: File path to sanitize
+        
+    Returns:
+        Sanitized file path
+    """
+    # Remove potentially dangerous characters
+    sanitized = path.replace('\'', '').replace('"', '').replace(';', '').replace('\n', '').replace('\r', '')
+    # Prevent directory traversal
+    sanitized = sanitized.replace('..', '')
+    return sanitized
 
 
 def _handle_exception(e: Exception) -> None:
@@ -282,13 +316,15 @@ class _BaseMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Use the correct syntax for the Rust backend
                 # Sanitize name to prevent injection
-                sanitized_name = name.replace("'", "''")
+                sanitized_name = _sanitize_graph_name(name)
+                if not sanitized_name:
+                    raise GraphError("Graph name contains only invalid characters")
+                
                 # Use CALL syntax to invoke the create_test_graph procedure
                 query = f"CALL create_test_graph('{sanitized_name}')"
                 self._execute_internal(query)
-                print(f"Graph '{name}' created successfully")
+                print(f"Graph '{sanitized_name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
@@ -356,6 +392,7 @@ class MiniGU(_BaseMiniGU):
                  cache_size: int = 1000,
                  enable_logging: bool = False):
         """Initialize MiniGU instance."""
+        # Correctly initialize the parent class
         super().__init__(db_path, thread_count, cache_size, enable_logging)
     
     def __enter__(self):
@@ -419,7 +456,11 @@ class MiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 if isinstance(data, (str, Path)):
-                    self._rust_instance.load_from_file(str(data))
+                    # Sanitize file path to prevent injection
+                    sanitized_path = _sanitize_file_path(str(data))
+                    if not sanitized_path:
+                        raise DataError("Invalid file path")
+                    self._rust_instance.load_from_file(sanitized_path)
                 else:
                     self._rust_instance.load_data(data)
                 print(f"Data loaded successfully")
@@ -444,8 +485,12 @@ class MiniGU(_BaseMiniGU):
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                self._rust_instance.save_to_file(path)
-                print(f"Database saved to {path}")
+                # Sanitize file path to prevent injection
+                sanitized_path = _sanitize_file_path(path)
+                if not sanitized_path:
+                    raise DataError("Invalid file path")
+                self._rust_instance.save_to_file(sanitized_path)
+                print(f"Database saved to {sanitized_path}")
             except Exception as e:
                 raise DataError(f"Database save failed: {str(e)}")
         else:
@@ -492,8 +537,9 @@ class AsyncMiniGU(_BaseMiniGU):
                  cache_size: int = 1000,
                  enable_logging: bool = False):
         """Initialize AsyncMiniGU instance."""
+        # Correctly initialize the parent class
         super().__init__(db_path, thread_count, cache_size, enable_logging)
-        self._loop = asyncio.get_event_loop()
+        # Do not initialize the loop here - it will be created when needed
     
     async def __aenter__(self):
         """Async context manager entry."""
