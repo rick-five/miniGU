@@ -56,42 +56,64 @@ class TestMiniGUAPI(unittest.TestCase):
 
     def test_create_graph(self):
         """Test creating a graph."""
-        # This should work without throwing exceptions
-        self.db.create_graph("test_graph")
-        # If we reach here, the test passes
+        # This should work without throwing exceptions and return True
+        result = self.db.create_graph("test_graph")
+        self.assertTrue(result)
 
     def test_create_graph_with_special_chars(self):
         """Test creating a graph with special characters in the name."""
         # This should sanitize the name and not throw exceptions
-        self.db.create_graph("test_graph_with_special_chars_123")
-        # If we reach here, the test passes
+        result = self.db.create_graph("test_graph_with_special_chars_123")
+        self.assertTrue(result)
 
     def test_create_graph_with_injection_attempt(self):
         """Test creating a graph with potential injection attempts."""
         # This should sanitize the name and not throw exceptions
-        self.db.create_graph("test_graph'; DROP TABLE users; --")
-        # If we reach here, the test passes
+        result = self.db.create_graph("test_graph'; DROP TABLE users; --")
+        self.assertTrue(result)
+
+    def test_load_data(self):
+        """Test loading data into the database."""
+        self.db.create_graph("test_graph_for_load")
+        # Test loading with empty data list
+        result = self.db.load([])
+        self.assertTrue(result)
+
+    def test_save_data(self):
+        """Test saving the database."""
+        self.db.create_graph("test_graph_for_save")
+        # Test saving to a path (this will fail because we don't have a real path, but should return False)
+        result = self.db.save("/tmp/test_save")
+        # This will likely fail due to path issues, but we're testing the return value handling
+        # The important thing is that it returns a boolean, not that it succeeds
+        self.assertIsInstance(result, bool)
 
     def test_begin_transaction(self):
         """Test beginning a transaction."""
         self.db.create_graph("test_graph_for_transaction")
         # This should raise TransactionError as the feature is not yet implemented
-        with self.assertRaises(minigu.TransactionError):
+        with self.assertRaises(minigu.TransactionError) as context:
             self.db.begin_transaction()
+        # Check that the error message indicates the feature is planned but not yet implemented
+        self.assertIn("not yet implemented", str(context.exception).lower())
 
     def test_commit_transaction(self):
         """Test committing a transaction."""
         self.db.create_graph("test_graph_for_commit")
         # This should raise TransactionError as the feature is not yet implemented
-        with self.assertRaises(minigu.TransactionError):
+        with self.assertRaises(minigu.TransactionError) as context:
             self.db.commit()
+        # Check that the error message indicates the feature is planned but not yet implemented
+        self.assertIn("not yet implemented", str(context.exception).lower())
 
     def test_rollback_transaction(self):
         """Test rolling back a transaction."""
         self.db.create_graph("test_graph_for_rollback")
         # This should raise TransactionError as the feature is not yet implemented
-        with self.assertRaises(minigu.TransactionError):
+        with self.assertRaises(minigu.TransactionError) as context:
             self.db.rollback()
+        # Check that the error message indicates the feature is planned but not yet implemented
+        self.assertIn("not yet implemented", str(context.exception).lower())
 
     def test_transaction_methods(self):
         """Test transaction methods existence and basic functionality."""
@@ -102,8 +124,73 @@ class TestMiniGUAPI(unittest.TestCase):
 
         # Test that transaction methods raise TransactionError as they are not yet implemented
         self.db.create_graph("test_graph_for_methods")
-        with self.assertRaises(minigu.TransactionError):
+        with self.assertRaises(minigu.TransactionError) as context:
             self.db.begin_transaction()
+        # Check that the error message indicates the feature is planned but not yet implemented
+        self.assertIn("not yet implemented", str(context.exception).lower())
+
+    def test_vertex_class(self):
+        """Test Vertex class functionality."""
+        # Test creating a vertex without parameters
+        vertex = minigu.Vertex()
+        self.assertIsNone(vertex.id)
+        self.assertIsNone(vertex.label)
+        self.assertEqual(vertex.properties, {})
+        
+        # Test creating a vertex with parameters
+        vertex = minigu.Vertex(vertex_id=1, label="Person", properties={"name": "Alice", "age": 30})
+        self.assertEqual(vertex.id, 1)
+        self.assertEqual(vertex.label, "Person")
+        self.assertEqual(vertex.properties, {"name": "Alice", "age": 30})
+        
+        # Test property access
+        self.assertEqual(vertex.get_property("name"), "Alice")
+        self.assertIsNone(vertex.get_property("nonexistent"))
+        
+        # Test property modification
+        vertex.set_property("city", "New York")
+        self.assertEqual(vertex.get_property("city"), "New York")
+        
+        # Test string representation
+        repr_str = repr(vertex)
+        self.assertIn("Vertex", repr_str)
+        self.assertIn("1", repr_str)
+        self.assertIn("Person", repr_str)
+
+    def test_edge_class(self):
+        """Test Edge class functionality."""
+        # Test creating an edge without parameters
+        edge = minigu.Edge()
+        self.assertIsNone(edge.id)
+        self.assertIsNone(edge.label)
+        self.assertIsNone(edge.source_id)
+        self.assertIsNone(edge.destination_id)
+        self.assertEqual(edge.properties, {})
+        
+        # Test creating an edge with parameters
+        edge = minigu.Edge(edge_id=1, label="KNOWS", source_id=1, destination_id=2, 
+                          properties={"since": 2020})
+        self.assertEqual(edge.id, 1)
+        self.assertEqual(edge.label, "KNOWS")
+        self.assertEqual(edge.source_id, 1)
+        self.assertEqual(edge.destination_id, 2)
+        self.assertEqual(edge.properties, {"since": 2020})
+        
+        # Test property access
+        self.assertEqual(edge.get_property("since"), 2020)
+        self.assertIsNone(edge.get_property("nonexistent"))
+        
+        # Test property modification
+        edge.set_property("strength", "strong")
+        self.assertEqual(edge.get_property("strength"), "strong")
+        
+        # Test string representation
+        repr_str = repr(edge)
+        self.assertIn("Edge", repr_str)
+        self.assertIn("1", repr_str)
+        self.assertIn("KNOWS", repr_str)
+        self.assertIn("1", repr_str)  # source
+        self.assertIn("2", repr_str)  # destination
 
     def test_sanitize_graph_name(self):
         """Test the graph name sanitization function."""
@@ -164,39 +251,85 @@ if sys.version_info >= (3, 8):
 
         async def test_async_create_graph(self):
             """Test creating a graph asynchronously."""
-            await self.db.create_graph("test_async_graph")
-            # If no exception is raised, the test passes
+            result = await self.db.create_graph("test_async_graph")
+            self.assertTrue(result)
 
         async def test_async_create_graph_with_special_chars(self):
             """Test creating a graph with special characters in the name asynchronously."""
-            await self.db.create_graph("test_async_graph_with_special_chars_123")
-            # If no exception is raised, the test passes
+            result = await self.db.create_graph("test_async_graph_with_special_chars_123")
+            self.assertTrue(result)
 
         async def test_async_create_graph_with_injection_attempt(self):
             """Test creating a graph with potential injection attempts asynchronously."""
-            await self.db.create_graph("test_async_graph'; DROP TABLE users; --")
-            # If no exception is raised, the test passes
+            result = await self.db.create_graph("test_async_graph'; DROP TABLE users; --")
+            self.assertTrue(result)
+
+        async def test_async_load_data(self):
+            """Test loading data into the database asynchronously."""
+            await self.db.create_graph("test_async_graph_for_load")
+            # Test loading with empty data list
+            result = await self.db.load([])
+            self.assertTrue(result)
+
+        async def test_async_save_data(self):
+            """Test saving the database asynchronously."""
+            await self.db.create_graph("test_async_graph_for_save")
+            # Test saving to a path (this will fail because we don't have a real path, but should return False)
+            result = await self.db.save("/tmp/test_save")
+            # This will likely fail due to path issues, but we're testing the return value handling
+            # The important thing is that it returns a boolean, not that it succeeds
+            self.assertIsInstance(result, bool)
 
         async def test_async_begin_transaction(self):
             """Test beginning a transaction asynchronously."""
             await self.db.create_graph("test_async_transaction_graph")
             # This should raise TransactionError as the feature is not yet implemented
-            with self.assertRaises(minigu.TransactionError):
+            with self.assertRaises(minigu.TransactionError) as context:
                 await self.db.begin_transaction()
+            # Check that the error message indicates the feature is planned but not yet implemented
+            self.assertIn("not yet implemented", str(context.exception).lower())
 
         async def test_async_commit_transaction(self):
             """Test committing a transaction asynchronously."""
             await self.db.create_graph("test_async_commit_graph")
             # This should raise TransactionError as the feature is not yet implemented
-            with self.assertRaises(minigu.TransactionError):
+            with self.assertRaises(minigu.TransactionError) as context:
                 await self.db.commit()
+            # Check that the error message indicates the feature is planned but not yet implemented
+            self.assertIn("not yet implemented", str(context.exception).lower())
 
         async def test_async_rollback_transaction(self):
             """Test rolling back a transaction asynchronously."""
             await self.db.create_graph("test_async_rollback_graph")
             # This should raise TransactionError as the feature is not yet implemented
-            with self.assertRaises(minigu.TransactionError):
+            with self.assertRaises(minigu.TransactionError) as context:
                 await self.db.rollback()
+            # Check that the error message indicates the feature is planned but not yet implemented
+            self.assertIn("not yet implemented", str(context.exception).lower())
+
+        async def test_async_vertex_class(self):
+            """Test Vertex class functionality in async context."""
+            # Test creating a vertex without parameters
+            vertex = minigu.Vertex()
+            self.assertIsNone(vertex.id)
+            self.assertIsNone(vertex.label)
+            self.assertEqual(vertex.properties, {})
+            
+            # Test creating a vertex with parameters
+            vertex = minigu.Vertex(vertex_id=1, label="Person", properties={"name": "Alice", "age": 30})
+            self.assertEqual(vertex.id, 1)
+            self.assertEqual(vertex.label, "Person")
+            self.assertEqual(vertex.properties, {"name": "Alice", "age": 30})
+
+        async def test_async_edge_class(self):
+            """Test Edge class functionality in async context."""
+            # Test creating an edge without parameters
+            edge = minigu.Edge()
+            self.assertIsNone(edge.id)
+            self.assertIsNone(edge.label)
+            self.assertIsNone(edge.source_id)
+            self.assertIsNone(edge.destination_id)
+            self.assertEqual(edge.properties, {})
 
 
 if __name__ == '__main__':

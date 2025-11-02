@@ -11,19 +11,34 @@ from pathlib import Path
 import json
 import asyncio
 
-# Import from package __init__.py with fallback for direct execution
+# Import from package __init__.py - this is the primary way to get the Rust bindings
 try:
     from . import HAS_RUST_BINDINGS, PyMiniGU
+    # Try to import the error checking functions
+    try:
+        from . import is_transaction_error, is_not_implemented_error
+    except ImportError:
+        # Fallback if these functions are not available
+        is_transaction_error = None
+        is_not_implemented_error = None
 except ImportError:
-    # Fallback when running directly
+    # Fallback when running directly or if package imports fail
     try:
         import minigu_python
         HAS_RUST_BINDINGS = True
         PyMiniGU = minigu_python.PyMiniGU
-    except (ImportError, ModuleNotFoundError) as e:
+        # Try to import the error checking functions
+        try:
+            is_transaction_error = minigu_python.is_transaction_error
+            is_not_implemented_error = minigu_python.is_not_implemented_error
+        except AttributeError:
+            # Fallback if these functions are not available
+            is_transaction_error = None
+            is_not_implemented_error = None
+    except (ImportError, ModuleNotFoundError):
+        # No longer provide simulated implementation warning, directly raise exception
         HAS_RUST_BINDINGS = False
-        PyMiniGU = None
-        print(f"Warning: Failed to import Rust extension: {e}")
+        raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
 def _sanitize_graph_name(name: str) -> str:
@@ -36,9 +51,8 @@ def _sanitize_graph_name(name: str) -> str:
     Returns:
         Sanitized graph name containing only alphanumeric characters and underscores
     """
-    # Remove any characters that are not alphanumeric or underscore
-    sanitized = re.sub(r'[^a-zA-Z0-9_]', '', name)
-    return sanitized
+    # Allow alphanumeric characters and underscores only (same logic as Rust)
+    return ''.join(c for c in name if c.isalnum() or c == '_')
 
 
 def _sanitize_file_path(path: str) -> str:
@@ -51,9 +65,9 @@ def _sanitize_file_path(path: str) -> str:
     Returns:
         Sanitized file path
     """
-    # Remove potentially dangerous characters
+    # Remove potentially dangerous characters (same logic as Rust)
     sanitized = path.replace('\'', '').replace('"', '').replace(';', '').replace('\n', '').replace('\r', '')
-    # Prevent directory traversal
+    # Prevent directory traversal (same logic as Rust)
     sanitized = sanitized.replace('..', '')
     return sanitized
 
@@ -72,20 +86,77 @@ def _handle_exception(e: Exception) -> None:
         TransactionError: For transaction-related errors
         MiniGUError: For other miniGU-related errors
     """
-    # Use string-based checking
+    # Use string-based checking with more precise patterns
     error_msg = str(e)
     error_lower = error_msg.lower()
     
-    if "syntax" in error_lower or "unexpected" in error_lower:
-        raise QuerySyntaxError(f"Query syntax error: {error_msg}")
+    # Try to use Rust-provided error checking functions if available
+    if is_transaction_error is not None and is_not_implemented_error is not None:
+        try:
+            # Try to use the Rust functions to check error types
+            if is_transaction_error(e):
+                raise TransactionError("Transaction operation failed")
+            elif is_not_implemented_error(e):
+                raise MiniGUError("Requested feature is not yet implemented")
+        except Exception:
+            # If the Rust functions fail, fall back to string matching
+            pass
+    
+    # Fallback to string matching with more precise patterns
+    # Syntax errors - more precise detection
+    if ("syntax" in error_lower and "error" in error_lower) or \
+       "unexpected" in error_lower or \
+       ("invalid" in error_lower and "syntax" in error_lower):
+        raise QuerySyntaxError("Invalid query syntax")
+    
+    # Timeout errors
     elif "timeout" in error_lower:
-        raise QueryTimeoutError(f"Query timeout: {error_msg}")
-    elif "transaction" in error_lower or "txn" in error_lower or "commit" in error_lower or "rollback" in error_lower:
-        raise TransactionError(f"Transaction error: {error_msg}")
-    elif "not implemented" in error_lower or "not yet implemented" in error_lower:
-        raise MiniGUError(f"Feature not implemented: {error_msg}")
+        raise QueryTimeoutError("Query execution timed out")
+    
+    # Transaction errors - more precise detection
+    elif "transaction" in error_lower or \
+         "txn" in error_lower or \
+         "commit" in error_lower or \
+         "rollback" in error_lower:
+        raise TransactionError("Transaction operation failed")
+    
+    # Not implemented errors
+    elif "not implemented" in error_lower or \
+         "not yet implemented" in error_lower:
+        raise MiniGUError("Requested feature is not yet implemented")
+    
+    # General execution errors
     else:
-        raise QueryExecutionError(f"Query execution failed: {error_msg}")
+        raise QueryExecutionError("Query execution failed")
+
+
+# Add specific exception checking functions with better error messages
+def _is_transaction_error(e: Exception) -> bool:
+    """
+    Check if an exception is a transaction-related error.
+    
+    Args:
+        e: The exception to check
+        
+    Returns:
+        bool: True if the exception is transaction-related, False otherwise
+    """
+    error_msg = str(e).lower()
+    return "transaction" in error_msg or "txn" in error_msg or "commit" in error_msg or "rollback" in error_msg
+
+
+def _is_not_implemented_error(e: Exception) -> bool:
+    """
+    Check if an exception indicates a feature is not implemented.
+    
+    Args:
+        e: The exception to check
+        
+    Returns:
+        bool: True if the feature is not implemented, False otherwise
+    """
+    error_msg = str(e).lower()
+    return "not implemented" in error_msg or "not yet implemented" in error_msg
 
 
 class MiniGUError(Exception):
@@ -134,71 +205,128 @@ class TransactionError(MiniGUError):
 
 
 class QueryResult:
-    """
-    Query result representation.
+    """Query result wrapper."""
     
-    This class encapsulates the results of a database query, including schema information,
-    data rows, and execution metrics.
+    def __init__(self, schema: List[Dict], data: List[List], metrics: Dict[str, Any]):
+        self.schema = schema
+        self.data = data
+        self.metrics = metrics
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+
+class Vertex:
+    """
+    Represents a vertex in the graph database.
+    
+    A vertex is a node in the graph with associated properties and labels.
     """
     
-    def __init__(self, schema: Optional[List[Dict[str, Any]]] = None, 
-                 data: Optional[List[List[Any]]] = None,
-                 metrics: Optional[Dict[str, float]] = None):
+    def __init__(self, vertex_id: Optional[int] = None, label: Optional[str] = None, 
+                 properties: Optional[Dict[str, Any]] = None):
         """
-        Initialize a QueryResult instance.
+        Initialize a Vertex.
         
         Args:
-            schema: Column schema information. Each item is a dict with 'name' and 'data_type' keys.
-            data: Query result data as a list of rows, where each row is a list of values.
-            metrics: Execution metrics including parsing, planning, and execution times.
+            vertex_id: Unique identifier for the vertex
+            label: Label for the vertex (e.g., "Person", "Company")
+            properties: Dictionary of properties associated with the vertex
         """
-        self.schema = schema or []
-        self.data = data or []
-        self.metrics = metrics or {}
-        self.row_count = len(self.data)
+        self.id = vertex_id
+        self.label = label
+        self.properties = properties or {}
     
-    def __iter__(self):
-        """Make QueryResult iterable."""
-        if not self.schema or not self.data:
-            return iter([])
-        
-        column_names = [col["name"] for col in self.schema]
-        return iter([dict(zip(column_names, row)) for row in self.data])
+    def __repr__(self):
+        return f"Vertex(id={self.id}, label='{self.label}', properties={self.properties})"
     
-    def __len__(self):
-        """Return the number of rows in the result."""
-        return self.row_count
+    def __str__(self):
+        return self.__repr__()
     
-    def to_list(self) -> List[Dict[str, Any]]:
+    def get_property(self, key: str) -> Any:
         """
-        Convert the result to a list of dictionaries format.
+        Get a property value by key.
         
+        Args:
+            key: Property key
+            
         Returns:
-            List of dictionaries, with each row as a dictionary mapping column names to values.
+            Property value or None if key doesn't exist
         """
-        if not self.schema or not self.data:
-            return []
-        
-        column_names = [col["name"] for col in self.schema]
-        return [dict(zip(column_names, row)) for row in self.data]
+        return self.properties.get(key)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def set_property(self, key: str, value: Any) -> None:
         """
-        Convert the result to dictionary format.
+        Set a property value.
         
-        Returns:
-            Dictionary containing schema, data, and metrics under respective keys.
+        Args:
+            key: Property key
+            value: Property value
         """
-        return {
-            "schema": self.schema,
-            "data": self.data,
-            "metrics": self.metrics,
-            "row_count": self.row_count
-        }
-    
-    def __repr__(self) -> str:
-        return f"QueryResult(rows={self.row_count}, columns={len(self.schema)})"
+        self.properties[key] = value
 
+
+class Edge:
+    """
+    Represents an edge in the graph database.
+    
+    An edge connects two vertices and has a direction (from source to destination).
+    """
+    
+    def __init__(self, edge_id: Optional[int] = None, label: Optional[str] = None,
+                 source_id: Optional[int] = None, destination_id: Optional[int] = None,
+                 properties: Optional[Dict[str, Any]] = None):
+        """
+        Initialize an Edge.
+        
+        Args:
+            edge_id: Unique identifier for the edge
+            label: Label for the edge (e.g., "KNOWS", "WORKS_AT")
+            source_id: ID of the source vertex
+            destination_id: ID of the destination vertex
+            properties: Dictionary of properties associated with the edge
+        """
+        self.id = edge_id
+        self.label = label
+        self.source_id = source_id
+        self.destination_id = destination_id
+        self.properties = properties or {}
+    
+    def __repr__(self):
+        return (f"Edge(id={self.id}, label='{self.label}', "
+                f"source={self.source_id}, destination={self.destination_id}, "
+                f"properties={self.properties})")
+    
+    def __str__(self):
+        return self.__repr__()
+    
+    def get_property(self, key: str) -> Any:
+        """
+        Get a property value by key.
+        
+        Args:
+            key: Property key
+            
+        Returns:
+            Property value or None if key doesn't exist
+        """
+        return self.properties.get(key)
+    
+    def set_property(self, key: str, value: Any) -> None:
+        """
+        Set a property value.
+        
+        Args:
+            key: Property key
+            value: Property value
+        """
+        self.properties[key] = value
 
 class _BaseMiniGU:
     """
@@ -411,6 +539,12 @@ class MiniGU(_BaseMiniGU):
     
     Stability:
         This API is currently in alpha state. Features may change in future versions.
+        
+    Feature Status:
+        - Graph operations: Implemented
+        - Query execution: Implemented
+        - Data loading/saving: Implemented
+        - Transactions: Not yet implemented (planned)
     """
     
     def __init__(self, db_path: Optional[str] = None, 
@@ -457,7 +591,7 @@ class MiniGU(_BaseMiniGU):
         metrics = result_dict.get("metrics", {})
         return QueryResult(schema, data, metrics)
     
-    def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
+    def create_graph(self, name: str, schema: Optional[Dict] = None) -> bool:
         """
         Create a graph database.
         
@@ -465,22 +599,35 @@ class MiniGU(_BaseMiniGU):
             name: Graph name
             schema: Graph schema definition (optional)
             
+        Returns:
+            bool: True if graph was created successfully, False otherwise
+            
         Raises:
             MiniGUError: Raised when database is not connected
             GraphError: Raised when graph creation fails
             
         Example:
             >>> db = MiniGU()
-            >>> db.create_graph("my_graph")
+            >>> success = db.create_graph("my_graph")
+            >>> if success:
+            ...     print("Graph created successfully")
         """
-        self._create_graph_internal(name, schema)
+        try:
+            self._create_graph_internal(name, schema)
+            return True
+        except Exception as e:
+            print(f"Failed to create graph '{name}': {e}")
+            return False
     
-    def load(self, data: Union[List[Dict], str, Path]) -> None:
+    def load(self, data: Union[List[Dict], str, Path]) -> bool:
         """
         Load data into the database.
         
         Args:
             data: Data to load, can be a list of dictionaries or file path
+            
+        Returns:
+            bool: True if data was loaded successfully, False otherwise
             
         Raises:
             MiniGUError: Raised when database is not connected
@@ -490,7 +637,9 @@ class MiniGU(_BaseMiniGU):
             >>> db = MiniGU()
             >>> db.create_graph("my_graph")
             >>> data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
-            >>> db.load(data)
+            >>> success = db.load(data)
+            >>> if success:
+            ...     print("Data loaded successfully")
         """
         # Ensure we're connected before executing
         self._ensure_connected()
@@ -506,17 +655,22 @@ class MiniGU(_BaseMiniGU):
                 else:
                     self._rust_instance.load_data(data)
                 print(f"Data loaded successfully")
+                return True
             except Exception as e:
-                raise DataError(f"Data loading failed: {str(e)}")
+                print(f"Data loading failed: {str(e)}")
+                return False
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
-    def save(self, path: str) -> None:
+    def save(self, path: str) -> bool:
         """
         Save the database to the specified path.
         
         Args:
             path: Save path
+            
+        Returns:
+            bool: True if database was saved successfully, False otherwise
             
         Raises:
             MiniGUError: Raised when database is not connected
@@ -525,7 +679,9 @@ class MiniGU(_BaseMiniGU):
         Example:
             >>> db = MiniGU()
             >>> db.create_graph("my_graph")
-            >>> db.save("/path/to/save/location")
+            >>> success = db.save("/path/to/save/location")
+            >>> if success:
+            ...     print("Database saved successfully")
         """
         # Ensure we're connected before executing
         self._ensure_connected()
@@ -538,8 +694,10 @@ class MiniGU(_BaseMiniGU):
                     raise DataError("Invalid file path")
                 self._rust_instance.save_to_file(sanitized_path)
                 print(f"Database saved to {sanitized_path}")
+                return True
             except Exception as e:
-                raise DataError(f"Database save failed: {str(e)}")
+                print(f"Database save failed: {str(e)}")
+                return False
         else:
             raise RuntimeError("Rust bindings required for database operations")
     
@@ -547,41 +705,61 @@ class MiniGU(_BaseMiniGU):
         """
         Begin a transaction.
         
+        Returns:
+            None
+            
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
             
         Note:
-            Transaction functionality is not yet implemented in the Rust backend.
+            Transaction functionality is not yet implemented.
             This method is a placeholder and will raise a TransactionError when called.
+            
+        Feature Status:
+            This feature is planned but not yet implemented.
         """
-        raise TransactionError("Transaction functionality not yet implemented in Rust backend")
+        raise TransactionError("Transaction functionality is not yet implemented. "
+                              "This feature is planned but not yet implemented.")
     
     def commit(self) -> None:
         """
         Commit the current transaction.
         
+        Returns:
+            None
+            
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
             
         Note:
-            Transaction functionality is not yet implemented in the Rust backend.
+            Transaction functionality is not yet implemented.
             This method is a placeholder and will raise a TransactionError when called.
+            
+        Feature Status:
+            This feature is planned but not yet implemented.
         """
-        raise TransactionError("Transaction functionality not yet implemented in Rust backend")
+        raise TransactionError("Transaction functionality is not yet implemented. "
+                              "This feature is planned but not yet implemented.")
     
     def rollback(self) -> None:
         """
         Rollback the current transaction.
         
+        Returns:
+            None
+            
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
             
         Note:
-            Transaction functionality is not yet implemented in the Rust backend.
+            Transaction functionality is not yet implemented.
             This method is a placeholder and will raise a TransactionError when called.
+            
+        Feature Status:
+            This feature is planned but not yet implemented.
         """
-        raise TransactionError("Transaction functionality not yet implemented in Rust backend")
-
+        raise TransactionError("Transaction functionality is not yet implemented. "
+                              "This feature is planned but not yet implemented.")
 
 class AsyncMiniGU(_BaseMiniGU):
     """
@@ -592,6 +770,12 @@ class AsyncMiniGU(_BaseMiniGU):
     
     Stability:
         This API is currently in alpha state. Features may change in future versions.
+        
+    Feature Status:
+        - Graph operations: Implemented
+        - Query execution: Implemented
+        - Data loading/saving: Implemented
+        - Transactions: Not yet implemented (planned)
     """
     
     def __init__(self, db_path: Optional[str] = None, 
@@ -616,6 +800,9 @@ class AsyncMiniGU(_BaseMiniGU):
         Close the database connection asynchronously.
         
         This method closes the connection to the database and releases any resources.
+        
+        Returns:
+            None
         """
         if self._rust_instance:
             self._rust_instance.close()
@@ -649,7 +836,7 @@ class AsyncMiniGU(_BaseMiniGU):
         metrics = result_dict.get("metrics", {})
         return QueryResult(schema, data, metrics)
     
-    async def create_graph(self, name: str, schema: Optional[Dict] = None) -> None:
+    async def create_graph(self, name: str, schema: Optional[Dict] = None) -> bool:
         """
         Create a graph database asynchronously.
         
@@ -657,55 +844,167 @@ class AsyncMiniGU(_BaseMiniGU):
             name: Graph name
             schema: Graph schema definition (optional)
             
+        Returns:
+            bool: True if graph was created successfully, False otherwise
+            
         Raises:
             MiniGUError: Raised when database is not connected
             GraphError: Raised when graph creation fails
             
         Example:
             >>> db = AsyncMiniGU()
-            >>> await db.create_graph("my_graph")
+            >>> success = await db.create_graph("my_graph")
+            >>> if success:
+            ...     print("Graph created successfully")
         """
-        self._create_graph_internal(name, schema)
+        try:
+            self._create_graph_internal(name, schema)
+            return True
+        except Exception as e:
+            print(f"Failed to create graph '{name}': {e}")
+            return False
     
+    async def load(self, data: Union[List[Dict], str, Path]) -> bool:
+        """
+        Load data into the database asynchronously.
+        
+        Args:
+            data: Data to load, can be a list of dictionaries or file path
+            
+        Returns:
+            bool: True if data was loaded successfully, False otherwise
+            
+        Raises:
+            MiniGUError: Raised when database is not connected
+            DataError: Raised when data loading fails
+            
+        Example:
+            >>> db = AsyncMiniGU()
+            >>> db.create_graph("my_graph")
+            >>> data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+            >>> success = await db.load(data)
+            >>> if success:
+            ...     print("Data loaded successfully")
+        """
+        # Ensure we're connected before executing
+        self._ensure_connected()
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                if isinstance(data, (str, Path)):
+                    # Sanitize file path to prevent injection
+                    sanitized_path = _sanitize_file_path(str(data))
+                    if not sanitized_path:
+                        raise DataError("Invalid file path")
+                    self._rust_instance.load_from_file(sanitized_path)
+                else:
+                    self._rust_instance.load_data(data)
+                print(f"Data loaded successfully")
+                return True
+            except Exception as e:
+                print(f"Data loading failed: {str(e)}")
+                return False
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+    
+    async def save(self, path: str) -> bool:
+        """
+        Save the database to the specified path asynchronously.
+        
+        Args:
+            path: Save path
+            
+        Returns:
+            bool: True if database was saved successfully, False otherwise
+            
+        Raises:
+            MiniGUError: Raised when database is not connected
+            DataError: Raised when save fails
+            
+        Example:
+            >>> db = AsyncMiniGU()
+            >>> db.create_graph("my_graph")
+            >>> success = await db.save("/path/to/save/location")
+            >>> if success:
+            ...     print("Database saved successfully")
+        """
+        # Ensure we're connected before executing
+        self._ensure_connected()
+        
+        if HAS_RUST_BINDINGS and self._rust_instance:
+            try:
+                # Sanitize file path to prevent injection
+                sanitized_path = _sanitize_file_path(path)
+                if not sanitized_path:
+                    raise DataError("Invalid file path")
+                self._rust_instance.save_to_file(sanitized_path)
+                print(f"Database saved to {sanitized_path}")
+                return True
+            except Exception as e:
+                print(f"Database save failed: {str(e)}")
+                return False
+        else:
+            raise RuntimeError("Rust bindings required for database operations")
+
     async def begin_transaction(self) -> None:
         """
         Begin a transaction asynchronously.
         
+        Returns:
+            None
+            
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
             
         Note:
-            Transaction functionality is not yet implemented in the Rust backend.
+            Transaction functionality is not yet implemented.
             This method is a placeholder and will raise a TransactionError when called.
+            
+        Feature Status:
+            This feature is planned but not yet implemented.
         """
-        raise TransactionError("Transaction functionality not yet implemented in Rust backend")
+        raise TransactionError("Transaction functionality is not yet implemented. "
+                              "This feature is planned but not yet implemented.")
     
     async def commit(self) -> None:
         """
         Commit the current transaction asynchronously.
         
+        Returns:
+            None
+            
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
             
         Note:
-            Transaction functionality is not yet implemented in the Rust backend.
+            Transaction functionality is not yet implemented.
             This method is a placeholder and will raise a TransactionError when called.
+            
+        Feature Status:
+            This feature is planned but not yet implemented.
         """
-        raise TransactionError("Transaction functionality not yet implemented in Rust backend")
+        raise TransactionError("Transaction functionality is not yet implemented. "
+                              "This feature is planned but not yet implemented.")
     
     async def rollback(self) -> None:
         """
         Rollback the current transaction asynchronously.
         
+        Returns:
+            None
+            
         Raises:
             TransactionError: Always raised as this feature is not yet implemented
             
         Note:
-            Transaction functionality is not yet implemented in the Rust backend.
+            Transaction functionality is not yet implemented.
             This method is a placeholder and will raise a TransactionError when called.
+            
+        Feature Status:
+            This feature is planned but not yet implemented.
         """
-        raise TransactionError("Transaction functionality not yet implemented in Rust backend")
-
+        raise TransactionError("Transaction functionality is not yet implemented. "
+                              "This feature is planned but not yet implemented.")
 
 def connect(db_path: Optional[str] = None,
             thread_count: int = 1,

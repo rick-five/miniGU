@@ -9,18 +9,28 @@ transaction management.
 Stability:
     This API is currently in alpha state. Features may change in future versions.
     
-Features:
-    - Synchronous and asynchronous interfaces
-    - Graph creation and management
-    - Data loading from various sources
-    - GQL query execution
-    - Transaction support (planned)
-    - Security features including input sanitization
-
-Example:
+Feature Status:
+    - Graph operations: Implemented
+    - Query execution: Implemented
+    - Data loading/saving: Implemented
+    - Transactions: Not yet implemented (planned)
+    
+Supported Python Versions:
+    Python 3.7 and above
+    
+Examples:
     >>> from minigu import MiniGU
     >>> db = MiniGU()
-    >>> db.create_graph("my_graph")
+    >>> success = db.create_graph("my_graph")
+    >>> if success:
+    ...     print("Graph created successfully")
+    >>> data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
+    >>> success = db.load(data)
+    >>> if success:
+    ...     print("Data loaded successfully")
+    >>> success = db.save("/path/to/save/location")
+    >>> if success:
+    ...     print("Database saved successfully")
     >>> result = db.execute("MATCH (n) RETURN n LIMIT 10")
 """
 
@@ -29,10 +39,20 @@ try:
     import minigu_python
     HAS_RUST_BINDINGS = True
     PyMiniGU = minigu_python.PyMiniGU
+    # Try to import the error checking functions
+    try:
+        is_transaction_error = minigu_python.is_transaction_error
+        is_not_implemented_error = minigu_python.is_not_implemented_error
+    except AttributeError:
+        # Fallback if these functions are not available
+        is_transaction_error = None
+        is_not_implemented_error = None
 except ImportError as e:
     # Fallback if the Rust extension is not available
     HAS_RUST_BINDINGS = False
     PyMiniGU = None
+    is_transaction_error = None
+    is_not_implemented_error = None
     # Print the actual error for debugging purposes
     print(f"Warning: Failed to import Rust extension: {e}")
 
@@ -40,38 +60,37 @@ except ImportError as e:
 from .minigu import (
     MiniGU,
     AsyncMiniGU,
-    connect,
-    async_connect,
+    QueryResult,
+    Vertex,
+    Edge,
     MiniGUError,
     ConnectionError,
-    QueryError,
     QuerySyntaxError,
     QueryExecutionError,
     QueryTimeoutError,
-    DataError,
     GraphError,
+    DataError,
     TransactionError,
-    QueryResult
 )
 
-# Export everything
 __all__ = [
-    'MiniGU',
-    'AsyncMiniGU',
-    'connect',
-    'async_connect',
-    'MiniGUError',
-    'ConnectionError',
-    'QueryError',
-    'QuerySyntaxError',
-    'QueryExecutionError',
-    'QueryTimeoutError',
-    'DataError',
-    'GraphError',
-    'TransactionError',
-    'QueryResult',
-    'PyMiniGU',
-    'HAS_RUST_BINDINGS'
+    "MiniGU",
+    "AsyncMiniGU", 
+    "QueryResult",
+    "Vertex",
+    "Edge",
+    "MiniGUError",
+    "ConnectionError",
+    "QuerySyntaxError",
+    "QueryExecutionError",
+    "QueryTimeoutError",
+    "GraphError",
+    "DataError",
+    "TransactionError",
+    "HAS_RUST_BINDINGS",
+    "PyMiniGU",
+    "is_transaction_error",
+    "is_not_implemented_error",
 ]
 
 __version__ = "0.1.0"
