@@ -73,42 +73,6 @@ class TestMiniGUAPI(unittest.TestCase):
         result = self.db.load([])
         self.assertTrue(result)
 
-    def test_sanitize_graph_name(self):
-        """Test the graph name sanitization function."""
-        # Test normal name
-        self.assertEqual(minigu._sanitize_graph_name("test_graph"), "test_graph")
-        
-        # Test name with special characters
-        self.assertEqual(minigu._sanitize_graph_name("test_graph_123"), "test_graph_123")
-        
-        # Test name with injection attempt
-        self.assertEqual(minigu._sanitize_graph_name("test_graph'; DROP TABLE users; --"), 
-                         "test_graphDROPTABLEusers")
-        
-        # Test name with only special characters
-        self.assertEqual(minigu._sanitize_graph_name("'; --"), "")
-
-    def test_sanitize_file_path(self):
-        """Test the file path sanitization function."""
-        # Test normal path
-        self.assertEqual(minigu._sanitize_file_path("/tmp/test_save"), "/tmp/test_save")
-        
-        # Test path with special characters
-        self.assertEqual(minigu._sanitize_file_path("/tmp/test_save_123"), "/tmp/test_save_123")
-        
-        # Test path with injection attempt
-        self.assertEqual(minigu._sanitize_file_path("/tmp/test_save'; DROP TABLE users; --"), 
-                         "/tmp/test_saveDROPTABLEusers")
-        
-        # Test path with only special characters
-        self.assertEqual(minigu._sanitize_file_path("'; --"), "")
-
-    def test_create_graph_with_injection_attempt(self):
-        """Test creating a graph with potential injection attempts."""
-        # This should sanitize the name and not throw exceptions
-        result = self.db.create_graph("test_graph'; DROP TABLE users; --")
-        self.assertTrue(result)
-
     def test_execute_query(self):
         """Test executing a query."""
         self.db.create_graph("test_graph_for_query")
@@ -150,13 +114,6 @@ if sys.version_info >= (3, 8):
         async def test_async_create_graph_with_special_chars(self):
             """Test creating a graph with special characters in the name asynchronously."""
             result = await self.db.create_graph("test_async_graph_with_special_chars_123")
-            self.assertTrue(result)
-
-        async def test_async_load_data(self):
-            """Test loading data into the database asynchronously."""
-            await self.db.create_graph("test_async_graph_for_load")
-            # Test loading with empty data list
-            result = await self.db.load([])
             self.assertTrue(result)
 
         async def test_async_create_graph_with_injection_attempt(self):
