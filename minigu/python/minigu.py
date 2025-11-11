@@ -41,36 +41,6 @@ except ImportError:
         raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
-def _sanitize_graph_name(name: str) -> str:
-    """
-    Sanitize graph name to prevent injection attacks.
-    
-    Args:
-        name: Graph name to sanitize
-        
-    Returns:
-        Sanitized graph name containing only alphanumeric characters and underscores
-    """
-    # Allow alphanumeric characters and underscores only (same logic as Rust)
-    return ''.join(c for c in name if c.isalnum() or c == '_')
-
-
-def _sanitize_file_path(path: str) -> str:
-    """
-    Sanitize file path to prevent injection attacks and directory traversal.
-    
-    Args:
-        path: File path to sanitize
-        
-    Returns:
-        Sanitized file path
-    """
-    # Remove potentially dangerous characters (same logic as Rust)
-    sanitized = path.replace('\'', '').replace('"', '').replace(';', '').replace('\n', '').replace('\r', '')
-    # Prevent directory traversal (same logic as Rust)
-    sanitized = sanitized.replace('..', '')
-    return sanitized
-
 
 def _handle_exception(e: Exception) -> None:
     """
@@ -458,15 +428,10 @@ class _BaseMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Sanitize name to prevent injection
-                sanitized_name = _sanitize_graph_name(name)
-                if not sanitized_name:
-                    raise GraphError("Graph name contains only invalid characters")
-                
                 # Use CALL syntax to invoke the create_test_graph procedure
-                query = f"CALL create_test_graph('{sanitized_name}')"
+                query = f"CALL create_test_graph('{name}')"
                 self._execute_internal(query)
-                print(f"Graph '{sanitized_name}' created successfully")
+                print(f"Graph '{name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
@@ -647,11 +612,7 @@ class MiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 if isinstance(data, (str, Path)):
-                    # Sanitize file path to prevent injection
-                    sanitized_path = _sanitize_file_path(str(data))
-                    if not sanitized_path:
-                        raise DataError("Invalid file path")
-                    self._rust_instance.load_from_file(sanitized_path)
+                    self._rust_instance.load_from_file(str(data))
                 else:
                     self._rust_instance.load_data(data)
                 print(f"Data loaded successfully")
@@ -688,11 +649,7 @@ class MiniGU(_BaseMiniGU):
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Sanitize file path to prevent injection
-                sanitized_path = _sanitize_file_path(path)
-                if not sanitized_path:
-                    raise DataError("Invalid file path")
-                self._rust_instance.save_to_file(sanitized_path)
+                self._rust_instance.save_to_file(path)
                 print(f"Database saved to {sanitized_path}")
                 return True
             except Exception as e:
@@ -892,11 +849,7 @@ class AsyncMiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 if isinstance(data, (str, Path)):
-                    # Sanitize file path to prevent injection
-                    sanitized_path = _sanitize_file_path(str(data))
-                    if not sanitized_path:
-                        raise DataError("Invalid file path")
-                    self._rust_instance.load_from_file(sanitized_path)
+                    self._rust_instance.load_from_file(str(data))
                 else:
                     self._rust_instance.load_data(data)
                 print(f"Data loaded successfully")
@@ -933,11 +886,7 @@ class AsyncMiniGU(_BaseMiniGU):
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Sanitize file path to prevent injection
-                sanitized_path = _sanitize_file_path(path)
-                if not sanitized_path:
-                    raise DataError("Invalid file path")
-                self._rust_instance.save_to_file(sanitized_path)
+                self._rust_instance.save_to_file(path)
                 print(f"Database saved to {sanitized_path}")
                 return True
             except Exception as e:
