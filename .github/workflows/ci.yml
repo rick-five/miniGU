@@ -130,34 +130,39 @@ jobs:
     timeout-minutes: 30
     steps:
     - uses: actions/checkout@v4
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
     - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-    - name: Set up virtual environment
+    - uses: Swatinem/rust-cache@v2
+    - name: Set up virtual environment and install maturin
       run: |
         cd minigu/python
         python -m venv .venv
         if [ "$RUNNER_OS" == "Windows" ]; then
-          echo "VIRTUAL_ENV=.venv" >> $GITHUB_ENV
-          echo ".venv/Scripts" >> $GITHUB_PATH
+          source .venv/Scripts/activate
         else
-          echo "VIRTUAL_ENV=.venv" >> $GITHUB_ENV
-          echo ".venv/bin" >> $GITHUB_PATH
+          source .venv/bin/activate
         fi
-    - name: Install maturin
-      run: |
-        cd minigu/python
         python -m pip install --upgrade pip
         pip install maturin
-    - name: Build and install Python module
-      uses: PyO3/maturin-action@v1
-      with:
-        working-directory: minigu/python
-        command: develop
-        args: --release
+    - name: Build Python extension
+      run: |
+        cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
+        maturin develop
     - name: Run Python tests
       run: |
         cd minigu/python
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          source .venv/Scripts/activate
+        else
+          source .venv/bin/activate
+        fi
         python test_minigu_api.py
 
   docs:
