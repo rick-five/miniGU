@@ -192,63 +192,6 @@ class QueryResult:
 
 
 
-class Edge:
-    """
-    Represents an edge in the graph database.
-    
-    An edge connects two vertices and has a direction (from source to destination).
-    """
-    
-    def __init__(self, edge_id: Optional[int] = None, label: Optional[str] = None,
-                 source_id: Optional[int] = None, destination_id: Optional[int] = None,
-                 properties: Optional[Dict[str, Any]] = None):
-        """
-        Initialize an Edge.
-        
-        Args:
-            edge_id: Unique identifier for the edge
-            label: Label for the edge (e.g., "KNOWS", "WORKS_AT")
-            source_id: ID of the source vertex
-            destination_id: ID of the destination vertex
-            properties: Dictionary of properties associated with the edge
-        """
-        self.id = edge_id
-        self.label = label
-        self.source_id = source_id
-        self.destination_id = destination_id
-        self.properties = properties or {}
-    
-    def __repr__(self):
-        return (f"Edge(id={self.id}, label='{self.label}', "
-                f"source={self.source_id}, destination={self.destination_id}, "
-                f"properties={self.properties})")
-    
-    def __str__(self):
-        return self.__repr__()
-    
-    def get_property(self, key: str) -> Any:
-        """
-        Get a property value by key.
-        
-        Args:
-            key: Property key
-            
-        Returns:
-            Property value or None if key doesn't exist
-        """
-        return self.properties.get(key)
-    
-    def set_property(self, key: str, value: Any) -> None:
-        """
-        Set a property value.
-        
-        Args:
-            key: Property key
-            value: Property value
-        """
-        self.properties[key] = value
-
-
 class _BaseMiniGU:
     """
     Base class for MiniGU database connections.
