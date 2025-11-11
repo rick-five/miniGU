@@ -13,15 +13,8 @@ import asyncio
 
 # Import from package __init__.py - this is the primary way to get the Rust bindings
 try:
-    from . import HAS_RUST_BINDINGS, PyMiniGU
-    # Try to import the error checking functions
-    try:
-        from . import is_transaction_error, is_not_implemented_error
-    except ImportError:
-        # Fallback if these functions are not available
-        is_transaction_error = None
-        is_not_implemented_error = None
-except ImportError:
+    from . import HAS_RUST_BINDINGS, PyMiniGU, is_transaction_error, is_not_implemented_error
+except (ImportError, ModuleNotFoundError):
     # Fallback when running directly or if package imports fail
     try:
         import minigu_python
