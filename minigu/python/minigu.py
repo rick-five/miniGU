@@ -41,7 +41,6 @@ except ImportError:
         raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
-
 def _handle_exception(e: Exception) -> None:
     """
     Handle exceptions from the Rust backend and convert them to appropriate Python exceptions.
@@ -650,7 +649,7 @@ class MiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 self._rust_instance.save_to_file(path)
-                print(f"Database saved to {sanitized_path}")
+                print(f"Database saved to {path}")
                 return True
             except Exception as e:
                 print(f"Database save failed: {str(e)}")
@@ -887,7 +886,7 @@ class AsyncMiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 self._rust_instance.save_to_file(path)
-                print(f"Database saved to {sanitized_path}")
+                print(f"Database saved to {path}")
                 return True
             except Exception as e:
                 print(f"Database save failed: {str(e)}")
