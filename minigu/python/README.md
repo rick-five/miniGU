@@ -321,22 +321,6 @@ def __init__(self, db_path: Optional[str] = None,
 - `data`：实际查询数据
 - `metrics`：查询执行指标
 
-### Vertex
-
-表示图中的节点：
-- `id`：节点ID
-- `label`：节点标签
-- `properties`：节点属性字典
-
-### Edge
-
-表示图中的边：
-- `id`：边ID
-- `label`：边标签
-- `source_id`：源节点ID
-- `destination_id`：目标节点ID
-- `properties`：边属性字典
-
 ## 异常处理
 
 Python接口定义了以下异常类型：
