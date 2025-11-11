@@ -40,13 +40,8 @@ try:
     HAS_RUST_BINDINGS = True
     PyMiniGU = minigu_python.PyMiniGU
     # Try to import the error checking functions
-    try:
-        is_transaction_error = minigu_python.is_transaction_error
-        is_not_implemented_error = minigu_python.is_not_implemented_error
-    except AttributeError:
-        # Fallback if these functions are not available
-        is_transaction_error = None
-        is_not_implemented_error = None
+    is_transaction_error = getattr(minigu_python, 'is_transaction_error', None)
+    is_not_implemented_error = getattr(minigu_python, 'is_not_implemented_error', None)
 except ImportError as e:
     # Fallback if the Rust extension is not available
     HAS_RUST_BINDINGS = False
