@@ -191,55 +191,6 @@ class QueryResult:
         return self.data[index]
 
 
-class Vertex:
-    """
-    Represents a vertex in the graph database.
-    
-    A vertex is a node in the graph with associated properties and labels.
-    """
-    
-    def __init__(self, vertex_id: Optional[int] = None, label: Optional[str] = None, 
-                 properties: Optional[Dict[str, Any]] = None):
-        """
-        Initialize a Vertex.
-        
-        Args:
-            vertex_id: Unique identifier for the vertex
-            label: Label for the vertex (e.g., "Person", "Company")
-            properties: Dictionary of properties associated with the vertex
-        """
-        self.id = vertex_id
-        self.label = label
-        self.properties = properties or {}
-    
-    def __repr__(self):
-        return f"Vertex(id={self.id}, label='{self.label}', properties={self.properties})"
-    
-    def __str__(self):
-        return self.__repr__()
-    
-    def get_property(self, key: str) -> Any:
-        """
-        Get a property value by key.
-        
-        Args:
-            key: Property key
-            
-        Returns:
-            Property value or None if key doesn't exist
-        """
-        return self.properties.get(key)
-    
-    def set_property(self, key: str, value: Any) -> None:
-        """
-        Set a property value.
-        
-        Args:
-            key: Property key
-            value: Property value
-        """
-        self.properties[key] = value
-
 
 class Edge:
     """
@@ -296,6 +247,7 @@ class Edge:
             value: Property value
         """
         self.properties[key] = value
+
 
 class _BaseMiniGU:
     """
