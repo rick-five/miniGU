@@ -41,37 +41,6 @@ except ImportError:
         raise ImportError("Rust bindings not available. miniGU requires Rust bindings to function.")
 
 
-def _sanitize_graph_name(name: str) -> str:
-    """
-    Sanitize graph name to prevent injection attacks.
-    
-    Args:
-        name: Graph name to sanitize
-        
-    Returns:
-        Sanitized graph name containing only alphanumeric characters and underscores
-    """
-    # Allow alphanumeric characters and underscores only (same logic as Rust)
-    return ''.join(c for c in name if c.isalnum() or c == '_')
-
-
-def _sanitize_file_path(path: str) -> str:
-    """
-    Sanitize file path to prevent injection attacks and directory traversal.
-    
-    Args:
-        path: File path to sanitize
-        
-    Returns:
-        Sanitized file path
-    """
-    # Remove potentially dangerous characters (same logic as Rust)
-    sanitized = path.replace('\'', '').replace('"', '').replace(';', '').replace('\n', '').replace('\r', '')
-    # Prevent directory traversal (same logic as Rust)
-    sanitized = sanitized.replace('..', '')
-    return sanitized
-
-
 def _handle_exception(e: Exception) -> None:
     """
     Handle exceptions from the Rust backend and convert them to appropriate Python exceptions.
@@ -222,111 +191,6 @@ class QueryResult:
         return self.data[index]
 
 
-class Vertex:
-    """
-    Represents a vertex in the graph database.
-    
-    A vertex is a node in the graph with associated properties and labels.
-    """
-    
-    def __init__(self, vertex_id: Optional[int] = None, label: Optional[str] = None, 
-                 properties: Optional[Dict[str, Any]] = None):
-        """
-        Initialize a Vertex.
-        
-        Args:
-            vertex_id: Unique identifier for the vertex
-            label: Label for the vertex (e.g., "Person", "Company")
-            properties: Dictionary of properties associated with the vertex
-        """
-        self.id = vertex_id
-        self.label = label
-        self.properties = properties or {}
-    
-    def __repr__(self):
-        return f"Vertex(id={self.id}, label='{self.label}', properties={self.properties})"
-    
-    def __str__(self):
-        return self.__repr__()
-    
-    def get_property(self, key: str) -> Any:
-        """
-        Get a property value by key.
-        
-        Args:
-            key: Property key
-            
-        Returns:
-            Property value or None if key doesn't exist
-        """
-        return self.properties.get(key)
-    
-    def set_property(self, key: str, value: Any) -> None:
-        """
-        Set a property value.
-        
-        Args:
-            key: Property key
-            value: Property value
-        """
-        self.properties[key] = value
-
-
-class Edge:
-    """
-    Represents an edge in the graph database.
-    
-    An edge connects two vertices and has a direction (from source to destination).
-    """
-    
-    def __init__(self, edge_id: Optional[int] = None, label: Optional[str] = None,
-                 source_id: Optional[int] = None, destination_id: Optional[int] = None,
-                 properties: Optional[Dict[str, Any]] = None):
-        """
-        Initialize an Edge.
-        
-        Args:
-            edge_id: Unique identifier for the edge
-            label: Label for the edge (e.g., "KNOWS", "WORKS_AT")
-            source_id: ID of the source vertex
-            destination_id: ID of the destination vertex
-            properties: Dictionary of properties associated with the edge
-        """
-        self.id = edge_id
-        self.label = label
-        self.source_id = source_id
-        self.destination_id = destination_id
-        self.properties = properties or {}
-    
-    def __repr__(self):
-        return (f"Edge(id={self.id}, label='{self.label}', "
-                f"source={self.source_id}, destination={self.destination_id}, "
-                f"properties={self.properties})")
-    
-    def __str__(self):
-        return self.__repr__()
-    
-    def get_property(self, key: str) -> Any:
-        """
-        Get a property value by key.
-        
-        Args:
-            key: Property key
-            
-        Returns:
-            Property value or None if key doesn't exist
-        """
-        return self.properties.get(key)
-    
-    def set_property(self, key: str, value: Any) -> None:
-        """
-        Set a property value.
-        
-        Args:
-            key: Property key
-            value: Property value
-        """
-        self.properties[key] = value
 
 class _BaseMiniGU:
     """
@@ -458,15 +322,10 @@ class _BaseMiniGU:
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Sanitize name to prevent injection
-                sanitized_name = _sanitize_graph_name(name)
-                if not sanitized_name:
-                    raise GraphError("Graph name contains only invalid characters")
-                
                 # Use CALL syntax to invoke the create_test_graph procedure
-                query = f"CALL create_test_graph('{sanitized_name}')"
+                query = f"CALL create_test_graph('{name}')"
                 self._execute_internal(query)
-                print(f"Graph '{sanitized_name}' created successfully")
+                print(f"Graph '{name}' created successfully")
             except Exception as e:
                 raise GraphError(f"Graph creation failed: {str(e)}")
         else:
@@ -647,11 +506,7 @@ class MiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 if isinstance(data, (str, Path)):
-                    # Sanitize file path to prevent injection
-                    sanitized_path = _sanitize_file_path(str(data))
-                    if not sanitized_path:
-                        raise DataError("Invalid file path")
-                    self._rust_instance.load_from_file(sanitized_path)
+                    self._rust_instance.load_from_file(str(data))
                 else:
                     self._rust_instance.load_data(data)
                 print(f"Data loaded successfully")
@@ -688,12 +543,8 @@ class MiniGU(_BaseMiniGU):
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Sanitize file path to prevent injection
-                sanitized_path = _sanitize_file_path(path)
-                if not sanitized_path:
-                    raise DataError("Invalid file path")
-                self._rust_instance.save_to_file(sanitized_path)
-                print(f"Database saved to {sanitized_path}")
+                self._rust_instance.save_to_file(path)
+                print(f"Database saved to {path}")
                 return True
             except Exception as e:
                 print(f"Database save failed: {str(e)}")
@@ -892,11 +743,7 @@ class AsyncMiniGU(_BaseMiniGU):
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
                 if isinstance(data, (str, Path)):
-                    # Sanitize file path to prevent injection
-                    sanitized_path = _sanitize_file_path(str(data))
-                    if not sanitized_path:
-                        raise DataError("Invalid file path")
-                    self._rust_instance.load_from_file(sanitized_path)
+                    self._rust_instance.load_from_file(str(data))
                 else:
                     self._rust_instance.load_data(data)
                 print(f"Data loaded successfully")
@@ -933,12 +780,8 @@ class AsyncMiniGU(_BaseMiniGU):
         
         if HAS_RUST_BINDINGS and self._rust_instance:
             try:
-                # Sanitize file path to prevent injection
-                sanitized_path = _sanitize_file_path(path)
-                if not sanitized_path:
-                    raise DataError("Invalid file path")
-                self._rust_instance.save_to_file(sanitized_path)
-                print(f"Database saved to {sanitized_path}")
+                self._rust_instance.save_to_file(path)
+                print(f"Database saved to {path}")
                 return True
             except Exception as e:
                 print(f"Database save failed: {str(e)}")

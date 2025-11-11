@@ -22,9 +22,11 @@ if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
     exit 0
 fi
 
+# PyO3 only supports Python 3, so we prioritize python3 command
 if command -v python3 &> /dev/null; then
     PYTHON_CMD=python3
 else
+    # Fallback to python command (on some systems, python refers to python3)
     PYTHON_CMD=python
 fi
 
